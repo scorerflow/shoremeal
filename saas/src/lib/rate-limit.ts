@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { APP_CONFIG } from '@/lib/config'
 
 type RateLimitResult = {
   success: boolean
@@ -42,14 +43,20 @@ function createRateLimiter(maxRequests: number, windowMs: number): RateLimiter |
   }
 }
 
-// 10 req/min per user for plan generation
-const _generateRateLimit = createRateLimiter(10, 60_000)
+const _generateRateLimit = createRateLimiter(
+  APP_CONFIG.rateLimits.generate.maxRequests,
+  APP_CONFIG.rateLimits.generate.windowMs
+)
 
-// 5 attempts per 15 min for auth (brute force protection)
-const _authRateLimit = createRateLimiter(5, 15 * 60_000)
+const _authRateLimit = createRateLimiter(
+  APP_CONFIG.rateLimits.auth.maxRequests,
+  APP_CONFIG.rateLimits.auth.windowMs
+)
 
-// 10 req/min for billing operations
-const _billingRateLimit = createRateLimiter(10, 60_000)
+const _billingRateLimit = createRateLimiter(
+  APP_CONFIG.rateLimits.billing.maxRequests,
+  APP_CONFIG.rateLimits.billing.windowMs
+)
 
 export async function checkRateLimit(
   type: 'generate' | 'auth' | 'billing',

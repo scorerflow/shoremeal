@@ -1,105 +1,40 @@
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, FileText, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
-import type { PlanStatus } from '@/types'
-
-const DEV_MODE = process.env.DEV_MODE === 'true'
-
-const STATUS_CONFIG: Record<PlanStatus, { icon: typeof Clock; label: string; colour: string; bg: string }> = {
-  pending: { icon: Clock, label: 'Queued', colour: 'text-amber-600', bg: 'bg-amber-100' },
-  generating: { icon: Loader2, label: 'Generating', colour: 'text-blue-600', bg: 'bg-blue-100' },
-  completed: { icon: CheckCircle2, label: 'Completed', colour: 'text-green-600', bg: 'bg-green-100' },
-  failed: { icon: XCircle, label: 'Failed', colour: 'text-red-600', bg: 'bg-red-100' },
-}
-
-interface PlanRow {
-  id: string
-  status: PlanStatus
-  generation_cost: number
-  tokens_used: number
-  created_at: string
-  updated_at: string
-  clients: { name: string } | null
-}
-
-const MOCK_PLANS: PlanRow[] = [
-  {
-    id: '1',
-    status: 'completed',
-    generation_cost: 0.042,
-    tokens_used: 11200,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    clients: { name: 'Sarah Mitchell' },
-  },
-  {
-    id: '2',
-    status: 'completed',
-    generation_cost: 0.038,
-    tokens_used: 10800,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    clients: { name: 'James Wilson' },
-  },
-  {
-    id: '3',
-    status: 'generating',
-    generation_cost: 0,
-    tokens_used: 0,
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    clients: { name: 'Emma Thompson' },
-  },
-]
+import { Plus, FileText } from 'lucide-react'
+import { PageHeader } from '@/components/PageHeader'
+import { EmptyState } from '@/components/EmptyState'
+import { StatusPill, getStatusConfig } from '@/components/StatusBadge'
+import { requireAuth } from '@/lib/auth'
+import { getPlansList } from '@/lib/data/plans-list'
 
 export default async function PlansPage() {
-  let plans: PlanRow[] = []
-
-  if (DEV_MODE) {
-    plans = MOCK_PLANS
-  } else {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (user) {
-      const { data } = await supabase
-        .from('plans')
-        .select('id, status, generation_cost, tokens_used, created_at, updated_at, clients(name)')
-        .eq('trainer_id', user.id)
-        .order('created_at', { ascending: false })
-
-      plans = (data as unknown as PlanRow[]) || []
-    }
-  }
+  const { user, supabase } = await requireAuth()
+  const plans = await getPlansList(supabase, user.id)
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Plans</h1>
-          <p className="text-gray-600">{plans.length} nutrition plan{plans.length !== 1 ? 's' : ''} generated</p>
-        </div>
-        <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
-          <Plus className="h-5 w-5 mr-2" />
-          New Plan
-        </Link>
-      </div>
+      <PageHeader
+        title="Plans"
+        subtitle={`${plans.length} nutrition plan${plans.length !== 1 ? 's' : ''} generated`}
+        action={
+          <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
+            <Plus className="h-5 w-5 mr-2" />
+            New Plan
+          </Link>
+        }
+      />
 
       {plans.length === 0 ? (
-        <div className="card text-center py-12">
-          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No plans yet</h3>
-          <p className="text-gray-600 mb-6">
-            Create your first nutrition plan for a client.
-          </p>
-          <Link href="/dashboard/clients/new" className="btn-primary">
-            Create First Plan
-          </Link>
-        </div>
+        <EmptyState
+          icon={<FileText className="h-12 w-12 text-gray-300" />}
+          heading="No plans yet"
+          description="Create your first nutrition plan for a client."
+          actionLabel="Create First Plan"
+          actionHref="/dashboard/clients/new"
+        />
       ) : (
         <div className="space-y-3">
           {plans.map((plan) => {
-            const config = STATUS_CONFIG[plan.status] || STATUS_CONFIG.pending
+            const config = getStatusConfig(plan.status)
             const StatusIcon = config.icon
 
             return (
@@ -135,9 +70,7 @@ export default async function PlansPage() {
                         {plan.tokens_used.toLocaleString()} tokens
                       </span>
                     )}
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.colour}`}>
-                      {config.label}
-                    </span>
+                    <StatusPill status={plan.status} />
                   </div>
                 </div>
               </Link>

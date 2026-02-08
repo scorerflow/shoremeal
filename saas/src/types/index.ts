@@ -75,6 +75,7 @@ export interface Branding {
   logo_url: string | null
   primary_colour: string
   secondary_colour: string
+  accent_colour: string
   created_at: string
   updated_at: string
 }
@@ -153,4 +154,56 @@ export interface GeneratePlanResponse {
   error?: string
   code?: string
   details?: Record<string, string>
+}
+
+// Parsed plan types (for PDF generation)
+export interface NutritionalAnalysis {
+  calories: string
+  protein: string
+  carbs: string
+  fats: string
+  paragraphs: string[]
+}
+
+export interface Meal {
+  type: string
+  description: string
+  macros: string
+}
+
+export interface MealPlanDay {
+  dayLabel: string
+  meals: Meal[]
+}
+
+export interface Recipe {
+  name: string
+  prepTime: string
+  cookTime: string
+  calories: string
+  protein: string
+  carbs: string
+  fats: string
+  ingredients: string[]
+  instructions: string[]
+}
+
+export interface ShoppingItem {
+  name: string
+  quantity: string
+}
+
+export interface ShoppingCategory {
+  category: string
+  items: ShoppingItem[]
+}
+
+export interface ParsedPlan {
+  nutritionalAnalysis: NutritionalAnalysis | null
+  mealPlan: MealPlanDay[]
+  recipes: Recipe[]
+  shoppingList: ShoppingCategory[]
+  mealPrepGuide: string[]
+  additionalTips: string[]
+  raw: string
 }

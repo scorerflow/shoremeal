@@ -39,7 +39,22 @@ export function validationError(error: ZodError): NextResponse {
   return apiError('Validation failed', 'VALIDATION_ERROR', 400, fieldErrors)
 }
 
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public code: ErrorCode,
+    public status: number
+  ) {
+    super(message)
+    this.name = 'AppError'
+  }
+}
+
 export function handleRouteError(error: unknown, context: string): NextResponse {
+  if (error instanceof AppError) {
+    return apiError(error.message, error.code, error.status)
+  }
+
   console.error(`[${context}]`, error)
 
   return apiError(

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { apiError, handleRouteError } from '@/lib/errors'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { handleRouteError } from '@/lib/errors'
+import { updateTrainerBranding } from '@/lib/services/branding'
 import { z } from 'zod'
 
 const brandingSchema = z.object({
@@ -9,39 +10,18 @@ const brandingSchema = z.object({
   accent_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex colour'),
 })
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request, { user, supabase }) => {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return apiError('Unauthorized', 'UNAUTHORIZED', 401)
-    }
-
     const body = await request.json()
     const parsed = brandingSchema.safeParse(body)
 
     if (!parsed.success) {
-      return apiError('Invalid colour values', 'VALIDATION_ERROR', 400)
+      return NextResponse.json({ error: 'Invalid colour values', code: 'VALIDATION_ERROR' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('branding')
-      .update({
-        primary_colour: parsed.data.primary_colour,
-        secondary_colour: parsed.data.secondary_colour,
-        accent_colour: parsed.data.accent_colour,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('trainer_id', user.id)
-
-    if (error) {
-      console.error('Branding update error:', error)
-      return apiError('Failed to update branding', 'INTERNAL_ERROR', 500)
-    }
-
-    return NextResponse.json({ success: true })
+    const result = await updateTrainerBranding(supabase, user.id, parsed.data)
+    return NextResponse.json(result)
   } catch (error) {
     return handleRouteError(error, 'branding')
   }
-}
+})

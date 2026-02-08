@@ -2,6 +2,10 @@ import { inngest } from './client'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { writeAuditLog } from '@/lib/audit'
+import { updatePlanStatus } from '@/lib/repositories/plans'
+import { incrementPlansUsed } from '@/lib/repositories/trainers'
+import { APP_CONFIG } from '@/lib/config'
+import { DISPLAY_LABELS } from '@/lib/constants'
 import type { ClientFormData } from '@/types'
 
 function getSupabase() {
@@ -14,19 +18,15 @@ function getSupabase() {
 export const generatePlan = inngest.createFunction(
   {
     id: 'generate-nutrition-plan',
-    retries: 3,
+    retries: APP_CONFIG.inngest.retries,
     onFailure: async ({ event }) => {
       const { planId } = event.data.event.data as { planId: string }
       const supabase = getSupabase()
 
-      await supabase
-        .from('plans')
-        .update({
-          status: 'failed',
-          error_message: 'Plan generation failed after maximum retries',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', planId)
+      await updatePlanStatus(supabase, planId, {
+        status: 'failed',
+        error_message: 'Plan generation failed after maximum retries',
+      })
 
       await writeAuditLog({
         userId: (event.data.event.data as { trainerId: string }).trainerId,
@@ -45,14 +45,7 @@ export const generatePlan = inngest.createFunction(
     await step.run('mark-generating', async () => {
       const supabase = getSupabase()
 
-      await supabase
-        .from('plans')
-        .update({
-          status: 'generating',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', planId)
-
+      await updatePlanStatus(supabase, planId, { status: 'generating' })
       await supabase.rpc('increment_plan_attempts', { plan_uuid: planId })
     })
 
@@ -66,8 +59,8 @@ export const generatePlan = inngest.createFunction(
       const prompt = buildNutritionPrompt(typedFormData, businessName)
 
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 16000,
+        model: APP_CONFIG.claude.model,
+        max_tokens: APP_CONFIG.claude.maxTokens,
         messages: [{ role: 'user', content: prompt }],
       })
 
@@ -75,8 +68,8 @@ export const generatePlan = inngest.createFunction(
         ? message.content[0].text
         : ''
 
-      const inputCost = (message.usage.input_tokens / 1_000_000) * 3
-      const outputCost = (message.usage.output_tokens / 1_000_000) * 15
+      const inputCost = (message.usage.input_tokens / 1_000_000) * APP_CONFIG.claude.pricing.inputPerMillion
+      const outputCost = (message.usage.output_tokens / 1_000_000) * APP_CONFIG.claude.pricing.outputPerMillion
       const totalCost = inputCost + outputCost
 
       return {
@@ -90,32 +83,14 @@ export const generatePlan = inngest.createFunction(
     await step.run('save-result', async () => {
       const supabase = getSupabase()
 
-      await supabase
-        .from('plans')
-        .update({
-          plan_text: result.planText,
-          generation_cost: result.totalCost,
-          tokens_used: result.tokensUsed,
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', planId)
+      await updatePlanStatus(supabase, planId, {
+        status: 'completed',
+        plan_text: result.planText,
+        generation_cost: result.totalCost,
+        tokens_used: result.tokensUsed,
+      })
 
-      // Increment trainer usage
-      const { data: trainer } = await supabase
-        .from('trainers')
-        .select('plans_used_this_month')
-        .eq('id', trainerId)
-        .single()
-
-      if (trainer) {
-        await supabase
-          .from('trainers')
-          .update({
-            plans_used_this_month: trainer.plans_used_this_month + 1,
-          })
-          .eq('id', trainerId)
-      }
+      await incrementPlansUsed(supabase, trainerId)
 
       await writeAuditLog({
         userId: trainerId,
@@ -133,35 +108,6 @@ export const generatePlan = inngest.createFunction(
     return { planId, status: 'completed' }
   }
 )
-
-const DISPLAY_LABELS: Record<string, Record<string, string>> = {
-  activity_level: {
-    sedentary: 'Sedentary (little or no exercise)',
-    lightly_active: 'Lightly active (1-3 days/week)',
-    moderately_active: 'Moderately active (3-5 days/week)',
-    very_active: 'Very active (6-7 days/week)',
-    extremely_active: 'Extra active (physical job + exercise)',
-  },
-  goal: {
-    fat_loss: 'Fat loss (maintain muscle)',
-    maintenance: 'Weight maintenance',
-    muscle_gain: 'Muscle gain / bulking',
-    recomp: 'Body recomposition / general health',
-  },
-  dietary_type: {
-    omnivore: 'Omnivore', vegetarian: 'Vegetarian', vegan: 'Vegan',
-    pescatarian: 'Pescatarian', keto: 'Keto', paleo: 'Paleo',
-    gluten_free: 'Gluten-free', dairy_free: 'Dairy-free',
-  },
-  cooking_skill: {
-    beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced',
-  },
-  meal_prep_style: {
-    daily: 'Daily (cook fresh each day)',
-    batch: 'Batch (prep meals in advance)',
-    mixed: 'Mixed (combination of both)',
-  },
-}
 
 function label(field: string, value: string): string {
   return DISPLAY_LABELS[field]?.[value] || value

@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react'
+import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
+import { StatusBanner } from '@/components/StatusBadge'
+import { EmptyState } from '@/components/EmptyState'
+import { AlertBanner } from '@/components/AlertBanner'
 
 type PlanStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
@@ -16,43 +19,13 @@ interface PlanData {
   updated_at: string
 }
 
-const STATUS_CONFIG = {
-  pending: {
-    icon: Clock,
-    label: 'Queued',
-    description: 'Your plan is in the queue and will begin generating shortly.',
-    colour: 'text-amber-600',
-    bg: 'bg-amber-50 border-amber-200',
-  },
-  generating: {
-    icon: Loader2,
-    label: 'Generating',
-    description: 'Claude is creating a personalised nutrition plan. This usually takes 30-60 seconds.',
-    colour: 'text-blue-600',
-    bg: 'bg-blue-50 border-blue-200',
-  },
-  completed: {
-    icon: CheckCircle2,
-    label: 'Completed',
-    description: 'Your nutrition plan is ready.',
-    colour: 'text-green-600',
-    bg: 'bg-green-50 border-green-200',
-  },
-  failed: {
-    icon: XCircle,
-    label: 'Failed',
-    description: 'Something went wrong generating this plan. Please try again.',
-    colour: 'text-red-600',
-    bg: 'bg-red-50 border-red-200',
-  },
-}
-
 export default function PlanDetailPage() {
   const params = useParams()
   const planId = params.id as string
   const [plan, setPlan] = useState<PlanData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pdfLoading, setPdfLoading] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const fetchStatus = useCallback(async () => {
@@ -72,6 +45,30 @@ export default function PlanDetailPage() {
       setLoading(false)
     }
   }, [planId])
+
+  const handleDownloadPdf = async () => {
+    setPdfLoading(true)
+    try {
+      const res = await fetch(`/api/plans/${planId}/pdf`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to generate PDF')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'Nutrition_Plan.pdf'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to download PDF')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
 
   useEffect(() => {
     const startPolling = async () => {
@@ -116,7 +113,7 @@ export default function PlanDetailPage() {
             Back to Dashboard
           </Link>
         </div>
-        <div className="card bg-red-50 border border-red-200">
+        <AlertBanner variant="error">
           <div className="flex items-center gap-3">
             <XCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
             <div>
@@ -124,14 +121,10 @@ export default function PlanDetailPage() {
               <p className="text-red-700">{error || 'Plan not found'}</p>
             </div>
           </div>
-        </div>
+        </AlertBanner>
       </div>
     )
   }
-
-  const config = STATUS_CONFIG[plan.status]
-  const StatusIcon = config.icon
-  const isActive = plan.status === 'pending' || plan.status === 'generating'
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -158,26 +151,30 @@ export default function PlanDetailPage() {
             })}
           </p>
         </div>
+        {plan.status === 'completed' && (
+          <button
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            {pdfLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Status banner */}
-      <div className={`border rounded-lg p-4 mb-6 ${config.bg}`}>
-        <div className="flex items-center gap-3">
-          <StatusIcon
-            className={`h-6 w-6 flex-shrink-0 ${config.colour} ${isActive ? 'animate-spin' : ''}`}
-          />
-          <div>
-            <h2 className={`font-semibold ${config.colour}`}>{config.label}</h2>
-            <p className="text-sm text-gray-700">{config.description}</p>
-          </div>
-        </div>
-        {isActive && (
-          <div className="mt-3 ml-9">
-            <div className="w-full bg-white/50 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-current h-1.5 rounded-full animate-pulse w-2/3" style={{ color: 'currentColor' }} />
-            </div>
-          </div>
-        )}
+      <div className="mb-6">
+        <StatusBanner status={plan.status} />
       </div>
 
       {/* Plan content */}
@@ -195,18 +192,15 @@ export default function PlanDetailPage() {
         </div>
       )}
 
-      {/* Failed - retry link */}
+      {/* Failed - retry */}
       {plan.status === 'failed' && (
-        <div className="card text-center py-8">
-          <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Generation Failed</h3>
-          <p className="text-gray-600 mb-6">
-            We were unable to generate this nutrition plan. This can happen due to high demand or a temporary issue.
-          </p>
-          <Link href="/dashboard/clients/new" className="btn-primary">
-            Try Again
-          </Link>
-        </div>
+        <EmptyState
+          icon={<XCircle className="h-12 w-12 text-red-400" />}
+          heading="Generation Failed"
+          description="We were unable to generate this nutrition plan. This can happen due to high demand or a temporary issue."
+          actionLabel="Try Again"
+          actionHref="/dashboard/clients/new"
+        />
       )}
     </div>
   )

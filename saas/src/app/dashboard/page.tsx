@@ -1,48 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus, FileText, Users, TrendingUp } from 'lucide-react'
 import { TIERS, SubscriptionTier } from '@/types'
-
-const DEV_MODE = process.env.DEV_MODE === 'true'
+import { PageHeader } from '@/components/PageHeader'
+import { StatCard } from '@/components/StatCard'
+import { AlertBanner } from '@/components/AlertBanner'
+import { requireAuth } from '@/lib/auth'
+import { getDashboardData } from '@/lib/data/dashboard'
 
 export default async function DashboardPage() {
-  let trainer: Record<string, any> | null = null
-  let clientCount: number | null = 0
-  let planCount: number | null = 0
-
-  if (DEV_MODE) {
-    trainer = {
-      full_name: 'David Scorer',
-      business_name: 'Shore Fitness',
-      subscription_tier: 'pro',
-      subscription_status: 'active',
-      plans_used_this_month: 3,
-    }
-    clientCount = 5
-    planCount = 12
-  } else {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const { data } = await supabase
-      .from('trainers')
-      .select('*')
-      .eq('id', user?.id)
-      .single()
-    trainer = data
-
-    const { count: cc } = await supabase
-      .from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('trainer_id', user?.id)
-    clientCount = cc
-
-    const { count: pc } = await supabase
-      .from('plans')
-      .select('*', { count: 'exact', head: true })
-      .eq('trainer_id', user?.id)
-    planCount = pc
-  }
+  const { user, supabase } = await requireAuth()
+  const { trainer, clientCount, planCount } = await getDashboardData(supabase, user.id)
 
   const tier = trainer?.subscription_tier as SubscriptionTier | null
   const plansLimit = tier ? TIERS[tier].plansPerMonth : 0
@@ -53,84 +20,57 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back{trainer?.full_name ? `, ${trainer.full_name.split(' ')[0]}` : ''}!</p>
-        </div>
-        {hasSubscription ? (
-          <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
-            <Plus className="h-5 w-5 mr-2" />
-            New Plan
-          </Link>
-        ) : (
-          <Link href="/pricing" className="btn-accent flex items-center">
-            Upgrade to Create Plans
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle={`Welcome back${trainer?.full_name ? `, ${trainer.full_name.split(' ')[0]}` : ''}!`}
+        action={
+          hasSubscription ? (
+            <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
+              <Plus className="h-5 w-5 mr-2" />
+              New Plan
+            </Link>
+          ) : (
+            <Link href="/pricing" className="btn-accent flex items-center">
+              Upgrade to Create Plans
+            </Link>
+          )
+        }
+      />
 
       {/* Subscription alert */}
       {!hasSubscription && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-          <p className="text-amber-800">
-            <strong>No active subscription.</strong>{' '}
-            <Link href="/pricing" className="underline">Choose a plan</Link> to start generating nutrition plans for your clients.
-          </p>
-        </div>
+        <AlertBanner variant="warning" className="mb-6">
+          <strong>No active subscription.</strong>{' '}
+          <Link href="/pricing" className="underline">Choose a plan</Link> to start generating nutrition plans for your clients.
+        </AlertBanner>
       )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 bg-primary-100 rounded-lg mr-4">
-              <FileText className="h-6 w-6 text-primary-800" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Plans This Month</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {plansUsed} / {plansLimit || '∞'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-lg mr-4">
-              <TrendingUp className="h-6 w-6 text-green-700" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Plans Remaining</p>
-              <p className="text-2xl font-bold text-gray-900">{plansRemaining}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-lg mr-4">
-              <Users className="h-6 w-6 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Clients</p>
-              <p className="text-2xl font-bold text-gray-900">{clientCount || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-3 bg-purple-100 rounded-lg mr-4">
-              <FileText className="h-6 w-6 text-purple-700" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Plans</p>
-              <p className="text-2xl font-bold text-gray-900">{planCount || 0}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          icon={<FileText className="h-6 w-6 text-primary-800" />}
+          iconBg="bg-primary-100"
+          label="Plans This Month"
+          value={`${plansUsed} / ${plansLimit || '\u221E'}`}
+        />
+        <StatCard
+          icon={<TrendingUp className="h-6 w-6 text-green-700" />}
+          iconBg="bg-green-100"
+          label="Plans Remaining"
+          value={plansRemaining}
+        />
+        <StatCard
+          icon={<Users className="h-6 w-6 text-blue-700" />}
+          iconBg="bg-blue-100"
+          label="Total Clients"
+          value={clientCount}
+        />
+        <StatCard
+          icon={<FileText className="h-6 w-6 text-purple-700" />}
+          iconBg="bg-purple-100"
+          label="Total Plans"
+          value={planCount}
+        />
       </div>
 
       {/* Quick actions */}

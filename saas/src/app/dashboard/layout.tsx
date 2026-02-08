@@ -1,9 +1,7 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
 import { LayoutDashboard, Users, FileText, Settings, LogOut } from 'lucide-react'
-
-const DEV_MODE = process.env.DEV_MODE === 'true'
+import { requireAuth } from '@/lib/auth'
+import { getTrainerById } from '@/lib/repositories/trainers'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -17,33 +15,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  let trainer: { full_name: string; business_name: string; subscription_tier: string } | null = null
-  let userEmail = ''
-
-  if (DEV_MODE) {
-    trainer = {
-      full_name: 'David Scorer',
-      business_name: 'Shore Fitness',
-      subscription_tier: 'pro',
-    }
-    userEmail = 'demo@nutriplanpro.com'
-  } else {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      redirect('/login')
-    }
-
-    userEmail = user.email || ''
-
-    const { data } = await supabase
-      .from('trainers')
-      .select('full_name, business_name, subscription_tier')
-      .eq('id', user.id)
-      .single()
-    trainer = data
-  }
+  const { user, supabase } = await requireAuth()
+  const trainer = await getTrainerById(supabase, user.id)
+  const userEmail = user.email || ''
 
   return (
     <div className="min-h-screen bg-gray-50">
