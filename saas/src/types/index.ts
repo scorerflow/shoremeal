@@ -157,53 +157,12 @@ export interface GeneratePlanResponse {
 }
 
 // Parsed plan types (for PDF generation)
-export interface NutritionalAnalysis {
-  calories: string
-  protein: string
-  carbs: string
-  fats: string
-  paragraphs: string[]
-}
-
-export interface Meal {
-  type: string
-  description: string
-  macros: string
-}
-
-export interface MealPlanDay {
-  dayLabel: string
-  meals: Meal[]
-}
-
-export interface Recipe {
-  name: string
-  prepTime: string
-  cookTime: string
-  calories: string
-  protein: string
-  carbs: string
-  fats: string
-  ingredients: string[]
-  instructions: string[]
-}
-
-export interface ShoppingItem {
-  name: string
-  quantity: string
-}
-
-export interface ShoppingCategory {
-  category: string
-  items: ShoppingItem[]
-}
-
 export interface ParsedPlan {
-  nutritionalAnalysis: NutritionalAnalysis | null
-  mealPlan: MealPlanDay[]
-  recipes: Recipe[]
-  shoppingList: ShoppingCategory[]
-  mealPrepGuide: string[]
-  additionalTips: string[]
+  sections: PlanSection[]
   raw: string
+}
+
+export interface PlanSection {
+  title: string
+  lines: string[]
 }

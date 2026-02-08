@@ -17,6 +17,146 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+// ── Text cleaning ───────────────────────────────────────────
+
+/** Strip bold markers, emoji (corrupts in PDF fonts), and mojibake */
+function cleanText(text: string): string {
+  return text
+    .replace(/\*\*/g, '')
+    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+    .replace(/[\u2600-\u27BF\uFE00-\uFE0F\u200D\u20E3]/g, '')
+    .replace(/=€/g, '')
+    .trim()
+}
+
+// ── Markdown table ──────────────────────────────────────────
+
+function isTableRow(line: string): boolean {
+  return /^\|.*\|$/.test(line.trim())
+}
+
+function isTableSeparator(line: string): boolean {
+  return /^\|[\s\-:|]+\|$/.test(line.trim())
+}
+
+function MarkdownTable({ lines, colours }: { lines: string[]; colours: BrandColours }) {
+  const s = createStyles(colours)
+  const dataLines = lines.filter(l => !isTableSeparator(l))
+  const rows = dataLines.map(l =>
+    l.split('|').map(c => c.trim()).filter(c => c.length > 0)
+  )
+  if (rows.length === 0) return null
+
+  const [header, ...dataRows] = rows
+  const colCount = header.length
+
+  return (
+    <View style={s.table}>
+      <View style={s.tableHeaderRow}>
+        {header.map((cell, i) => (
+          <View key={i} style={{ flex: 1 }}>
+            <Text style={s.tableHeaderCell}>{cleanText(cell)}</Text>
+          </View>
+        ))}
+      </View>
+      {dataRows.map((row, i) => (
+        <View key={i} style={[s.tableRow, i % 2 === 0 ? s.tableRowEven : s.tableRowOdd]}>
+          {Array.from({ length: colCount }, (_, j) => (
+            <View key={j} style={{ flex: 1 }}>
+              <Text style={s.tableCell}>{cleanText(row[j] || '')}</Text>
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  )
+}
+
+// ── Rich line (single markdown line → styled element) ───────
+
+function RichLine({ line, colours }: { line: string; colours: BrandColours }) {
+  const s = createStyles(colours)
+  const clean = cleanText(line)
+
+  // Divider: --- or ___ or ***
+  if (/^[-_*]{3,}$/.test(line)) {
+    return <View style={s.divider} />
+  }
+
+  // ## or ### heading
+  if (/^#{2,3}\s+/.test(line)) {
+    return <Text style={s.subsectionHeading}>{cleanText(line.replace(/^#+\s+/, ''))}</Text>
+  }
+
+  // # heading
+  if (/^#\s+/.test(line)) {
+    return <Text style={s.subsectionTitle}>{cleanText(line.replace(/^#+\s+/, ''))}</Text>
+  }
+
+  // ALL CAPS line (e.g. "SUNDAY PREP SESSION")
+  if (/^[A-Z][A-Z\s&:–-]{4,}$/.test(clean)) {
+    return <Text style={s.subsectionTitle}>{clean}</Text>
+  }
+
+  // "Step N:" pattern
+  if (/^step\s+\d+/i.test(clean)) {
+    return <Text style={s.subsectionHeading}>{clean}</Text>
+  }
+
+  // Entire line is bold **Like This**
+  if (/^\*\*[^*]+\*\*:?\s*$/.test(line)) {
+    return <Text style={s.subsectionHeading}>{clean}</Text>
+  }
+
+  // Bullet: - or • followed by space
+  const bulletMatch = line.match(/^[-•]\s+(.*)$/)
+  if (bulletMatch) {
+    return (
+      <View style={s.bulletRow}>
+        <Text style={s.bulletDot}>•</Text>
+        <Text style={s.bulletText}>{cleanText(bulletMatch[1])}</Text>
+      </View>
+    )
+  }
+
+  // Numbered list: 1. or 1)
+  const numberedMatch = line.match(/^\d+[.)]\s+(.*)$/)
+  if (numberedMatch) {
+    return (
+      <View style={s.bulletRow}>
+        <Text style={s.bulletDot}>•</Text>
+        <Text style={s.bulletText}>{cleanText(numberedMatch[1])}</Text>
+      </View>
+    )
+  }
+
+  // Regular paragraph
+  return <Text style={s.paragraph}>{clean}</Text>
+}
+
+// ── Rich content (handles tables + lines) ───────────────────
+
+function RichContent({ lines, colours }: { lines: string[]; colours: BrandColours }) {
+  const elements: React.ReactNode[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    if (isTableRow(lines[i])) {
+      const tableLines: string[] = []
+      while (i < lines.length && (isTableRow(lines[i]) || isTableSeparator(lines[i]))) {
+        tableLines.push(lines[i])
+        i++
+      }
+      elements.push(<MarkdownTable key={`t-${i}`} lines={tableLines} colours={colours} />)
+    } else {
+      elements.push(<RichLine key={`l-${i}`} line={lines[i]} colours={colours} />)
+      i++
+    }
+  }
+
+  return <>{elements}</>
+}
+
 // ── Cover Page ──────────────────────────────────────────────
 
 function CoverPage({ clientName, trainerName, businessName, colours, createdAt }: Omit<PlanDocumentProps, 'plan'>) {
@@ -60,168 +200,9 @@ function PageLayout({ children, trainerName, colours }: { children: React.ReactN
 function SectionHeader({ title, colours }: { title: string; colours: BrandColours }) {
   const s = createStyles(colours)
   return (
-    <View style={s.mb8}>
+    <View>
       <Text style={s.sectionTitle}>{title}</Text>
       <View style={s.sectionUnderline} />
-    </View>
-  )
-}
-
-// ── Nutritional Analysis ────────────────────────────────────
-
-function NutritionalAnalysisContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  const na = plan.nutritionalAnalysis
-  if (!na) return null
-
-  const macros = [
-    { label: 'Calories', value: na.calories, colour: '#e53e3e' },
-    { label: 'Protein', value: na.protein, colour: '#3182ce' },
-    { label: 'Carbs', value: na.carbs, colour: '#38a169' },
-    { label: 'Fats', value: na.fats, colour: '#d69e2e' },
-  ]
-
-  return (
-    <View>
-      <View style={s.macroBar}>
-        {macros.map((m) => (
-          <View key={m.label} style={s.macroItem}>
-            <View style={[s.macroDot, { backgroundColor: m.colour }]} />
-            <Text style={s.macroValue}>{m.value || '—'}</Text>
-            <Text style={s.macroLabel}>{m.label}</Text>
-          </View>
-        ))}
-      </View>
-      {na.paragraphs.map((p, i) => (
-        <Text key={i} style={s.paragraph}>{p}</Text>
-      ))}
-    </View>
-  )
-}
-
-// ── Meal Plan ───────────────────────────────────────────────
-
-function MealPlanContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  if (plan.mealPlan.length === 0) return null
-
-  return (
-    <View>
-      {plan.mealPlan.map((day) => (
-        <View key={day.dayLabel} wrap={false}>
-          <View style={s.dayHeader}>
-            <Text style={s.dayHeaderText}>{day.dayLabel}</Text>
-          </View>
-          {day.meals.map((meal, j) => (
-            <View key={j} style={[s.mealRow, j % 2 === 0 ? s.mealRowEven : s.mealRowOdd]}>
-              <Text style={s.mealType}>{meal.type}</Text>
-              <Text style={s.mealDescription}>{meal.description}</Text>
-              <Text style={s.mealMacros}>{meal.macros}</Text>
-            </View>
-          ))}
-        </View>
-      ))}
-    </View>
-  )
-}
-
-// ── Recipes ─────────────────────────────────────────────────
-
-function RecipesContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  if (plan.recipes.length === 0) return null
-
-  return (
-    <View>
-      {plan.recipes.map((recipe, i) => (
-        <View key={i} style={s.recipeCard} wrap={false}>
-          <View style={s.recipeHeader}>
-            <Text style={s.recipeName}>{recipe.name}</Text>
-            <View style={s.recipeMeta}>
-              {recipe.prepTime && <Text style={s.recipeMetaItem}>Prep: {recipe.prepTime}</Text>}
-              {recipe.cookTime && <Text style={s.recipeMetaItem}>Cook: {recipe.cookTime}</Text>}
-              {recipe.calories && <Text style={s.recipeMetaItem}>{recipe.calories} kcal</Text>}
-              {recipe.protein && <Text style={s.recipeMetaItem}>P: {recipe.protein}</Text>}
-              {recipe.carbs && <Text style={s.recipeMetaItem}>C: {recipe.carbs}</Text>}
-              {recipe.fats && <Text style={s.recipeMetaItem}>F: {recipe.fats}</Text>}
-            </View>
-          </View>
-          <View style={s.recipeBody}>
-            {recipe.ingredients.length > 0 && (
-              <View>
-                <Text style={s.recipeSubheading}>Ingredients</Text>
-                {recipe.ingredients.map((ing, j) => (
-                  <Text key={j} style={s.ingredientItem}>• {ing}</Text>
-                ))}
-              </View>
-            )}
-            {recipe.instructions.length > 0 && (
-              <View>
-                <Text style={s.recipeSubheading}>Instructions</Text>
-                {recipe.instructions.map((step, j) => (
-                  <View key={j} style={{ flexDirection: 'row', marginBottom: 3 }}>
-                    <Text style={s.instructionNumber}>{j + 1}.</Text>
-                    <Text style={s.instructionItem}>{step}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
-      ))}
-    </View>
-  )
-}
-
-// ── Shopping List ───────────────────────────────────────────
-
-function ShoppingListContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  if (plan.shoppingList.length === 0) return null
-
-  return (
-    <View>
-      {plan.shoppingList.map((cat, i) => (
-        <View key={i} style={s.shoppingCategory}>
-          <Text style={s.shoppingCategoryHeader}>{cat.category}</Text>
-          {cat.items.map((item, j) => (
-            <View key={j} style={s.shoppingItem}>
-              <Text style={s.shoppingItemName}>{item.name}</Text>
-              <Text style={s.shoppingItemQty}>{item.quantity}</Text>
-            </View>
-          ))}
-        </View>
-      ))}
-    </View>
-  )
-}
-
-// ── Meal Prep Guide ─────────────────────────────────────────
-
-function MealPrepGuideContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  if (plan.mealPrepGuide.length === 0) return null
-
-  return (
-    <View>
-      {plan.mealPrepGuide.map((p, i) => (
-        <Text key={i} style={s.paragraph}>{p}</Text>
-      ))}
-    </View>
-  )
-}
-
-// ── Additional Tips ─────────────────────────────────────────
-
-function AdditionalTipsContent({ plan, colours }: { plan: ParsedPlan; colours: BrandColours }) {
-  const s = createStyles(colours)
-  if (plan.additionalTips.length === 0) return null
-
-  return (
-    <View>
-      {plan.additionalTips.map((p, i) => (
-        <Text key={i} style={s.paragraph}>{p}</Text>
-      ))}
     </View>
   )
 }
@@ -230,33 +211,6 @@ function AdditionalTipsContent({ plan, colours }: { plan: ParsedPlan; colours: B
 
 export function NutritionPlanDocument(props: PlanDocumentProps) {
   const { plan, clientName, trainerName, businessName, colours, createdAt } = props
-
-  const sections: { title: string; content: React.ReactNode }[] = [
-    {
-      title: 'Nutritional Analysis',
-      content: <NutritionalAnalysisContent plan={plan} colours={colours} />,
-    },
-    {
-      title: 'Meal Plan',
-      content: <MealPlanContent plan={plan} colours={colours} />,
-    },
-    {
-      title: 'Recipes',
-      content: <RecipesContent plan={plan} colours={colours} />,
-    },
-    {
-      title: 'Shopping List',
-      content: <ShoppingListContent plan={plan} colours={colours} />,
-    },
-    {
-      title: 'Meal Prep Guide',
-      content: <MealPrepGuideContent plan={plan} colours={colours} />,
-    },
-    {
-      title: 'Additional Tips & Advice',
-      content: <AdditionalTipsContent plan={plan} colours={colours} />,
-    },
-  ]
 
   return (
     <Document
@@ -271,10 +225,10 @@ export function NutritionPlanDocument(props: PlanDocumentProps) {
         colours={colours}
         createdAt={createdAt}
       />
-      {sections.map((section) => (
+      {plan.sections.map((section) => (
         <PageLayout key={section.title} trainerName={trainerName} colours={colours}>
           <SectionHeader title={section.title} colours={colours} />
-          {section.content}
+          <RichContent lines={section.lines} colours={colours} />
         </PageLayout>
       ))}
     </Document>

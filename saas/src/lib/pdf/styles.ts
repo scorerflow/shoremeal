@@ -139,203 +139,110 @@ export function createStyles(colours?: Partial<BrandColours>) {
       fontSize: 20,
       fontWeight: 700,
       color: c.primary,
-      marginBottom: 4,
+      marginBottom: 6,
     },
     sectionUnderline: {
       width: 40,
       height: 2,
       backgroundColor: c.accent,
-      marginBottom: 16,
+      marginBottom: 20,
     },
 
-    // Macro summary bar
-    macroBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      backgroundColor: '#f7fafc',
-      borderRadius: 6,
-      padding: 12,
-      marginBottom: 16,
-    },
-    macroItem: {
-      alignItems: 'center',
-    },
-    macroDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginBottom: 4,
-    },
-    macroValue: {
+    // Subsection headings
+    subsectionTitle: {
       fontFamily: 'Inter',
       fontSize: 13,
       fontWeight: 700,
-      color: '#1a202c',
-    },
-    macroLabel: {
-      fontFamily: 'Inter',
-      fontSize: 8,
-      color: '#718096',
-      fontWeight: 500,
-    },
-
-    // Day headers
-    dayHeader: {
-      backgroundColor: c.primary,
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 4,
+      color: c.primary,
       marginTop: 14,
       marginBottom: 6,
     },
-    dayHeaderText: {
-      fontFamily: 'Inter',
-      fontSize: 12,
-      fontWeight: 700,
-      color: '#ffffff',
-    },
-
-    // Meal rows
-    mealRow: {
-      flexDirection: 'row',
-      paddingVertical: 6,
-      paddingHorizontal: 8,
-      borderRadius: 2,
-    },
-    mealRowEven: {
-      backgroundColor: '#f7fafc',
-    },
-    mealRowOdd: {
-      backgroundColor: '#ffffff',
-    },
-    mealType: {
-      width: '18%',
-      fontFamily: 'Inter',
-      fontSize: 9,
-      fontWeight: 600,
-      color: c.primary,
-    },
-    mealDescription: {
-      width: '55%',
-      fontFamily: 'Inter',
-      fontSize: 9,
-      color: '#2d3748',
-    },
-    mealMacros: {
-      width: '27%',
-      fontFamily: 'Inter',
-      fontSize: 8,
-      color: '#718096',
-      textAlign: 'right',
-    },
-
-    // Recipe cards
-    recipeCard: {
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      borderRadius: 6,
-      marginBottom: 14,
-      overflow: 'hidden',
-    },
-    recipeHeader: {
-      backgroundColor: hexToRgba(c.primary, 0.06),
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: '#e2e8f0',
-    },
-    recipeName: {
-      fontFamily: 'Inter',
-      fontSize: 12,
-      fontWeight: 700,
-      color: c.primary,
-    },
-    recipeMeta: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 4,
-    },
-    recipeMetaItem: {
-      fontFamily: 'Inter',
-      fontSize: 8,
-      color: '#718096',
-    },
-    recipeBody: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    recipeSubheading: {
-      fontFamily: 'Inter',
-      fontSize: 9,
-      fontWeight: 600,
-      color: '#4a5568',
-      marginBottom: 4,
-      marginTop: 6,
-    },
-    ingredientItem: {
-      fontFamily: 'Inter',
-      fontSize: 9,
-      color: '#2d3748',
-      marginBottom: 2,
-      paddingLeft: 8,
-    },
-    instructionItem: {
-      fontFamily: 'Inter',
-      fontSize: 9,
-      color: '#2d3748',
-      marginBottom: 3,
-      paddingLeft: 8,
-    },
-    instructionNumber: {
-      fontFamily: 'Inter',
-      fontSize: 8,
-      fontWeight: 600,
-      color: c.accent,
-      marginRight: 4,
-    },
-
-    // Shopping list
-    shoppingCategory: {
-      marginBottom: 10,
-    },
-    shoppingCategoryHeader: {
+    subsectionHeading: {
       fontFamily: 'Inter',
       fontSize: 11,
       fontWeight: 600,
-      color: c.primary,
+      color: c.secondary,
+      marginTop: 10,
       marginBottom: 4,
-      paddingBottom: 2,
-      borderBottomWidth: 1,
-      borderBottomColor: hexToRgba(c.accent, 0.3),
-    },
-    shoppingItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingVertical: 2,
-      paddingHorizontal: 4,
-    },
-    shoppingItemName: {
-      fontFamily: 'Inter',
-      fontSize: 9,
-      color: '#2d3748',
-    },
-    shoppingItemQty: {
-      fontFamily: 'Inter',
-      fontSize: 9,
-      color: '#718096',
     },
 
-    // Paragraphs (meal prep, tips)
+    // Paragraphs
     paragraph: {
       fontFamily: 'Inter',
       fontSize: 10,
       color: '#2d3748',
-      lineHeight: 1.6,
-      marginBottom: 6,
+      lineHeight: 1.7,
+      marginBottom: 8,
     },
 
-    // Utility
-    mb8: { marginBottom: 8 },
-    mb16: { marginBottom: 16 },
+    // Bullet points
+    bulletRow: {
+      flexDirection: 'row',
+      paddingLeft: 12,
+      marginBottom: 3,
+    },
+    bulletDot: {
+      fontFamily: 'Inter',
+      fontSize: 9,
+      color: c.accent,
+      width: 12,
+    },
+    bulletText: {
+      fontFamily: 'Inter',
+      fontSize: 9.5,
+      color: '#2d3748',
+      flex: 1,
+      lineHeight: 1.5,
+    },
+
+    // Divider
+    divider: {
+      height: 1,
+      backgroundColor: '#e2e8f0',
+      marginVertical: 12,
+    },
+
+    // Markdown table
+    table: {
+      marginVertical: 8,
+      borderWidth: 0.5,
+      borderColor: '#e2e8f0',
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    tableHeaderRow: {
+      flexDirection: 'row',
+      backgroundColor: hexToRgba(c.primary, 0.08),
+      borderBottomWidth: 1,
+      borderBottomColor: '#e2e8f0',
+      paddingVertical: 5,
+      paddingHorizontal: 4,
+    },
+    tableHeaderCell: {
+      fontFamily: 'Inter',
+      fontSize: 8,
+      fontWeight: 600,
+      color: c.primary,
+      paddingHorizontal: 4,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+      borderBottomWidth: 0.5,
+      borderBottomColor: '#f0f0f0',
+    },
+    tableRowEven: {
+      backgroundColor: '#f7fafc',
+    },
+    tableRowOdd: {
+      backgroundColor: '#ffffff',
+    },
+    tableCell: {
+      fontFamily: 'Inter',
+      fontSize: 8,
+      color: '#2d3748',
+      paddingHorizontal: 4,
+    },
   })
 }
