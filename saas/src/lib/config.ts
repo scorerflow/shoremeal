@@ -24,5 +24,9 @@ export const APP_CONFIG = {
   },
   polling: {
     intervalMs: 3_000,
+    maxPolls: 100, // 5 minutes at 3s intervals
+  },
+  planTimeout: {
+    staleMinutes: 10, // Plans stuck in 'generating' for more than 10 minutes are marked as failed
   },
 } as const

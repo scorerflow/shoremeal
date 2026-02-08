@@ -3,6 +3,7 @@ import type { Plan, PlanStatus } from '@/types'
 
 export interface PlanWithClient {
   id: string
+  client_id: string
   status: PlanStatus
   plan_text: string | null
   trainer_id: string
@@ -57,7 +58,7 @@ export async function getPlanWithClient(
 ): Promise<PlanWithClient | null> {
   let query = db
     .from('plans')
-    .select('id, status, plan_text, trainer_id, created_at, updated_at, clients(name)')
+    .select('id, client_id, status, plan_text, trainer_id, created_at, updated_at, clients(name)')
     .eq('id', planId)
 
   if (trainerId) {

@@ -6,9 +6,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PlanStatus } from '@/types'
 import { getClientsByTrainer, type ClientWithPlans } from '@/lib/repositories/clients'
-import { DEV_CLIENTS } from '@/lib/dev-fixtures'
-
-const DEV_MODE = process.env.DEV_MODE === 'true'
 
 export interface ClientRow {
   id: string
@@ -22,9 +19,5 @@ export async function getClientsList(
   supabase: SupabaseClient,
   userId: string
 ): Promise<ClientRow[]> {
-  if (DEV_MODE) {
-    return DEV_CLIENTS
-  }
-
   return getClientsByTrainer(supabase, userId)
 }

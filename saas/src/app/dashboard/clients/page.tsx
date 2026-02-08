@@ -44,7 +44,12 @@ export default async function ClientsPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{client.name}</p>
+                    <Link
+                      href={`/dashboard/clients/${client.id}`}
+                      className="font-medium text-gray-900 hover:text-primary-800 truncate block"
+                    >
+                      {client.name}
+                    </Link>
                     <div className="flex items-center gap-3 mt-1">
                       {client.email && (
                         <p className="text-sm text-gray-500 truncate">{client.email}</p>

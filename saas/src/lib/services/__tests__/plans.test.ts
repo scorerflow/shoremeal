@@ -10,11 +10,13 @@ vi.mock('@/lib/repositories/trainers', () => ({
 
 vi.mock('@/lib/repositories/clients', () => ({
   createClient: vi.fn(),
+  getClientById: vi.fn(),
 }))
 
 vi.mock('@/lib/repositories/plans', () => ({
   createPlan: vi.fn(),
   getPlanWithClient: vi.fn(),
+  updatePlanStatus: vi.fn(),
 }))
 
 vi.mock('@/lib/repositories/branding', () => ({
@@ -230,7 +232,7 @@ describe('requestPlanGeneration', () => {
       action: 'plan.generation_started',
       resourceType: 'plan',
       resourceId: mockPlan.id,
-      metadata: { clientId: mockClient.id, tier: 'pro' },
+      metadata: { clientId: mockClient.id, tier: 'pro', reusingExisting: false },
       ipAddress: ip,
     })
   })
@@ -287,6 +289,7 @@ describe('getPlanStatusData', () => {
   it('should return plan status data without plan_text for pending plan', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'pending' as const,
       plan_text: null,
       trainer_id: userId,
@@ -313,6 +316,7 @@ describe('getPlanStatusData', () => {
   it('should return plan status data with plan_text for completed plan', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: 'Full nutrition plan content here...',
       trainer_id: userId,
@@ -338,6 +342,7 @@ describe('getPlanStatusData', () => {
   it('should handle plan with no client data', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'generating' as const,
       plan_text: null,
       trainer_id: userId,
@@ -356,6 +361,7 @@ describe('getPlanStatusData', () => {
   it('should pass userId to repository when provided', async () => {
     vi.mocked(getPlanWithClient).mockResolvedValue({
       id: planId,
+      client_id: 'client-123',
       status: 'pending' as const,
       plan_text: null,
       trainer_id: userId,
@@ -372,6 +378,7 @@ describe('getPlanStatusData', () => {
   it('should pass undefined to repository when userId is null', async () => {
     vi.mocked(getPlanWithClient).mockResolvedValue({
       id: planId,
+      client_id: 'client-123',
       status: 'pending' as const,
       plan_text: null,
       trainer_id: userId,
@@ -410,6 +417,7 @@ describe('generatePlanPdfForExport', () => {
   it('should throw error if plan is not completed', async () => {
     vi.mocked(getPlanWithClient).mockResolvedValue({
       id: planId,
+      client_id: 'client-123',
       status: 'generating' as const,
       plan_text: null,
       trainer_id: userId,
@@ -426,6 +434,7 @@ describe('generatePlanPdfForExport', () => {
   it('should throw error if plan has no plan_text', async () => {
     vi.mocked(getPlanWithClient).mockResolvedValue({
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: null,
       trainer_id: userId,
@@ -442,6 +451,7 @@ describe('generatePlanPdfForExport', () => {
   it('should generate PDF with trainer and branding data', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: 'Full plan content...',
       trainer_id: userId,
@@ -493,6 +503,7 @@ describe('generatePlanPdfForExport', () => {
   it('should use default branding colors when branding not found', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: 'Full plan content...',
       trainer_id: userId,
@@ -517,6 +528,7 @@ describe('generatePlanPdfForExport', () => {
   it('should use trainer full_name when business_name not available', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: 'Content',
       trainer_id: userId,
@@ -544,6 +556,7 @@ describe('generatePlanPdfForExport', () => {
   it('should use default client name when client not found', async () => {
     const mockPlan = {
       id: planId,
+      client_id: 'client-123',
       status: 'completed' as const,
       plan_text: 'Content',
       trainer_id: userId,

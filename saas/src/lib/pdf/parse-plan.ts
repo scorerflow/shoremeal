@@ -12,7 +12,6 @@ import type {
 function matchAll(text: string, pattern: RegExp): RegExpExecArray[] {
   const results: RegExpExecArray[] = []
   let m: RegExpExecArray | null
-  // Ensure we use a fresh regex with global flag
   const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
   while ((m = re.exec(text)) !== null) {
     results.push(m)
@@ -21,35 +20,45 @@ function matchAll(text: string, pattern: RegExp): RegExpExecArray[] {
 }
 
 /**
- * Splits raw plan text on bold section headers like **NUTRITIONAL ANALYSIS**
- * Returns a map of header → content (trimmed)
+ * Find the 6 main section boundaries in the raw plan text.
+ * Only splits on known top-level headers — subsection headers stay within their parent.
+ * Each section's content includes everything up to the next main section.
  */
-function splitSections(text: string): Map<string, string> {
-  const sections = new Map<string, string>()
-  const headerPattern = /\*\*([A-Z][A-Z0-9\s\-&/,]+)\*\*/g
-  const matches = matchAll(text, headerPattern)
+function extractMainSections(raw: string): Record<string, string> {
+  const lines = raw.split('\n')
 
-  for (let i = 0; i < matches.length; i++) {
-    const key = matches[i][1].trim()
-    const start = matches[i].index! + matches[i][0].length
-    const end = i + 1 < matches.length ? matches[i + 1].index! : text.length
-    sections.set(key, text.slice(start, end).trim())
+  const mainSectionPatterns: { key: string; test: (s: string) => boolean }[] = [
+    { key: 'nutritional', test: (s) => /NUTRITIONAL\s+ANALYSIS/i.test(s) },
+    { key: 'mealPlan', test: (s) => /MEAL\s+PLAN/i.test(s) },
+    { key: 'recipes', test: (s) => /\bRECIPES?\b/i.test(s) },
+    { key: 'shopping', test: (s) => /SHOPPING\s+LIST/i.test(s) },
+    { key: 'mealPrep', test: (s) => /MEAL\s+PREP/i.test(s) },
+    { key: 'tips', test: (s) => /ADDITIONAL\s+TIPS/i.test(s) },
+  ]
+
+  const positions: { key: string; lineIndex: number }[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    // Must look like a header line (markdown heading or bold text)
+    if (!/^#{1,3}\s+/.test(line) && !/^(?:\d+[.)]\s*)?\*\*/.test(line)) continue
+
+    for (const { key, test } of mainSectionPatterns) {
+      if (test(line) && !positions.some((p) => p.key === key)) {
+        positions.push({ key, lineIndex: i })
+        break
+      }
+    }
+  }
+
+  const sections: Record<string, string> = {}
+  for (let i = 0; i < positions.length; i++) {
+    const startLine = positions[i].lineIndex + 1
+    const endLine = i + 1 < positions.length ? positions[i + 1].lineIndex : lines.length
+    sections[positions[i].key] = lines.slice(startLine, endLine).join('\n').trim()
   }
 
   return sections
-}
-
-function findSection(sections: Map<string, string>, ...keywords: string[]): string | undefined {
-  const entries = Array.from(sections.entries())
-  for (let i = 0; i < entries.length; i++) {
-    const key = entries[i][0]
-    const value = entries[i][1]
-    const upper = key.toUpperCase()
-    if (keywords.some(kw => upper.includes(kw))) {
-      return value
-    }
-  }
-  return undefined
 }
 
 function parseNutritionalAnalysis(text: string): NutritionalAnalysis | null {
@@ -81,7 +90,7 @@ function parseNutritionalAnalysis(text: string): NutritionalAnalysis | null {
 
     const paragraphs = text
       .split('\n')
-      .map(l => l.trim())
+      .map(l => l.replace(/\*\*/g, '').trim())
       .filter(l => l.length > 0)
       .filter(l => !/^[-•*]\s*(protein|carb|fat|calorie)/i.test(l))
       .filter(l => l.length > 40)
@@ -118,6 +127,7 @@ function parseMealPlan(text: string): MealPlanDay[] {
         const macros = macroMatch ? macroMatch[1] : ''
         const description = mealContent
           .replace(/\([^)]*(?:kcal|cal|calories|protein|carb|fat)[^)]*\)/gi, '')
+          .replace(/\*\*/g, '')
           .split('\n')[0]
           .trim()
 
@@ -149,7 +159,7 @@ function parseRecipes(text: string): Recipe[] {
       const name = m[1].trim()
       return name.length > 3 &&
         name.length < 100 &&
-        !/^(ingredients|instructions|method|steps|nutritional|nutrition|prep|cook)/i.test(name)
+        !/^(ingredients|instructions|method|steps|nutritional|nutrition|prep|cook|detailed|serves?|makes?)/i.test(name)
     })
 
     for (let i = 0; i < recipeHeaders.length; i++) {
@@ -215,12 +225,13 @@ function parseRecipes(text: string): Recipe[] {
 function parseShoppingList(text: string): ShoppingCategory[] {
   const categories: ShoppingCategory[] = []
   try {
-    const catPattern = /\*?\*?([A-Za-z\s&/]+)\*?\*?\s*[:]\s*/g
+    // Match bold category headers with or without trailing colon
+    const catPattern = /\*\*([A-Za-z\s&/]+)\*\*\s*:?\s*/g
     const matches = matchAll(text, catPattern)
 
     for (let i = 0; i < matches.length; i++) {
       const category = matches[i][1].trim()
-      if (/^(estimated|total|money|budget|tip|note)/i.test(category)) continue
+      if (/^(estimated|total|money|budget|tip|note|saving)/i.test(category)) continue
 
       const start = matches[i].index! + matches[i][0].length
       const end = i + 1 < matches.length ? matches[i + 1].index! : text.length
@@ -254,27 +265,20 @@ function parseParagraphs(text: string): string[] {
   if (!text) return []
   return text
     .split('\n')
-    .map(l => l.replace(/^[-•*\d.)\s]+/, '').trim())
+    .map(l => l.replace(/^[-•*\d.)\s]+/, '').replace(/\*\*/g, '').trim())
     .filter(l => l.length > 0)
 }
 
 export function parsePlanText(raw: string): ParsedPlan {
-  const sections = splitSections(raw)
-
-  const nutritionalText = findSection(sections, 'NUTRITIONAL', 'ANALYSIS')
-  const mealPlanText = findSection(sections, 'MEAL PLAN', 'DAY MEAL')
-  const recipesText = findSection(sections, 'RECIPE')
-  const shoppingText = findSection(sections, 'SHOPPING')
-  const mealPrepText = findSection(sections, 'MEAL PREP', 'PREP GUIDE')
-  const tipsText = findSection(sections, 'ADDITIONAL', 'TIPS', 'ADVICE')
+  const sections = extractMainSections(raw)
 
   return {
-    nutritionalAnalysis: nutritionalText ? parseNutritionalAnalysis(nutritionalText) : null,
-    mealPlan: mealPlanText ? parseMealPlan(mealPlanText) : [],
-    recipes: recipesText ? parseRecipes(recipesText) : [],
-    shoppingList: shoppingText ? parseShoppingList(shoppingText) : [],
-    mealPrepGuide: mealPrepText ? parseParagraphs(mealPrepText) : [],
-    additionalTips: tipsText ? parseParagraphs(tipsText) : [],
+    nutritionalAnalysis: sections.nutritional ? parseNutritionalAnalysis(sections.nutritional) : null,
+    mealPlan: sections.mealPlan ? parseMealPlan(sections.mealPlan) : [],
+    recipes: sections.recipes ? parseRecipes(sections.recipes) : [],
+    shoppingList: sections.shopping ? parseShoppingList(sections.shopping) : [],
+    mealPrepGuide: sections.mealPrep ? parseParagraphs(sections.mealPrep) : [],
+    additionalTips: sections.tips ? parseParagraphs(sections.tips) : [],
     raw,
   }
 }

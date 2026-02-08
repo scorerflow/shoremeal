@@ -33,7 +33,7 @@ export function withAuth(handler: AuthenticatedHandler) {
         // In dev mode, create a mock context with service client
         const { createServiceClient } = await import('@/lib/supabase/server')
         const supabase = await createServiceClient()
-        const mockUser = { id: 'dev-user', email: 'dev@nutriplan.test' } as User
+        const mockUser = { id: '00000000-0000-0000-0000-000000000001', email: 'dev@nutriplan.test' } as User
         return handler(request, { user: mockUser, supabase, ip }, routeContext?.params)
       }
 
@@ -60,7 +60,7 @@ export async function requireAuth(): Promise<{ user: User; supabase: SupabaseCli
   if (DEV_MODE) {
     const { createServiceClient } = await import('@/lib/supabase/server')
     const supabase = await createServiceClient()
-    const mockUser = { id: 'dev-user', email: 'dev@nutriplan.test' } as User
+    const mockUser = { id: '00000000-0000-0000-0000-000000000001', email: 'dev@nutriplan.test' } as User
     return { user: mockUser, supabase }
   }
 

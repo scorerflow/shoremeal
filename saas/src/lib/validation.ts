@@ -18,6 +18,7 @@ function sanitizeText(input: string): string {
 const sanitizedString = z.string().transform(sanitizeText)
 
 export const generatePlanSchema = z.object({
+  clientId: z.string().uuid().optional(),
   name: sanitizedString.pipe(z.string().min(1, 'Client name is required').max(100)),
   age: z.coerce.number().int().min(16, 'Age must be at least 16').max(100, 'Age must be 100 or less'),
   gender: z.enum(['M', 'F'], { errorMap: () => ({ message: 'Gender must be M or F' }) }),

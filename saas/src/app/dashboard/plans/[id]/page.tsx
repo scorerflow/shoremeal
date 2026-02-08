@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
+import { APP_CONFIG } from '@/lib/config'
 
 type PlanStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
@@ -26,7 +27,10 @@ export default function PlanDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const [pollingTimeout, setPollingTimeout] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pollCountRef = useRef(0)
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -70,12 +74,45 @@ export default function PlanDetailPage() {
     }
   }
 
+  const handleRetry = async () => {
+    setRetrying(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/plans/${planId}/retry`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to retry plan generation')
+      }
+      await fetchStatus()
+      pollCountRef.current = 0
+      setPollingTimeout(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to retry plan generation')
+    } finally {
+      setRetrying(false)
+    }
+  }
+
   useEffect(() => {
+    pollCountRef.current = 0
+    setPollingTimeout(false)
+
     const startPolling = async () => {
       const status = await fetchStatus()
 
       if (status === 'pending' || status === 'generating') {
         intervalRef.current = setInterval(async () => {
+          pollCountRef.current += 1
+
+          if (pollCountRef.current >= APP_CONFIG.polling.maxPolls) {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+            setPollingTimeout(true)
+            return
+          }
+
           const newStatus = await fetchStatus()
           if (newStatus !== 'pending' && newStatus !== 'generating') {
             if (intervalRef.current) {
@@ -83,7 +120,7 @@ export default function PlanDetailPage() {
               intervalRef.current = null
             }
           }
-        }, 3000)
+        }, APP_CONFIG.polling.intervalMs)
       }
     }
 
@@ -177,6 +214,31 @@ export default function PlanDetailPage() {
         <StatusBanner status={plan.status} />
       </div>
 
+      {/* Polling timeout warning */}
+      {pollingTimeout && (plan.status === 'pending' || plan.status === 'generating') && (
+        <AlertBanner variant="warning">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-yellow-900">Taking longer than expected</h2>
+              <p className="text-yellow-700">
+                Your plan is still being generated, but it&apos;s taking longer than usual.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                pollCountRef.current = 0
+                setPollingTimeout(false)
+                fetchStatus()
+              }}
+              className="btn-secondary flex-shrink-0 text-sm"
+            >
+              Check again
+            </button>
+          </div>
+        </AlertBanner>
+      )}
+
       {/* Plan content */}
       {plan.status === 'completed' && plan.plan_text && (
         <div className="card">
@@ -194,13 +256,30 @@ export default function PlanDetailPage() {
 
       {/* Failed - retry */}
       {plan.status === 'failed' && (
-        <EmptyState
-          icon={<XCircle className="h-12 w-12 text-red-400" />}
-          heading="Generation Failed"
-          description="We were unable to generate this nutrition plan. This can happen due to high demand or a temporary issue."
-          actionLabel="Try Again"
-          actionHref="/dashboard/clients/new"
-        />
+        <div className="card">
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <XCircle className="h-12 w-12 text-red-400 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Generation Failed</h2>
+            <p className="text-gray-600 mb-6 max-w-md">
+              We were unable to generate this nutrition plan. This can happen due to high demand or a temporary issue.
+              Click below to try generating the plan again.
+            </p>
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                'Retry Generation'
+              )}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

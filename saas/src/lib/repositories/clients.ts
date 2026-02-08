@@ -30,6 +30,20 @@ export async function createClient(
   return client as Client
 }
 
+export async function getClientById(
+  db: SupabaseClient,
+  clientId: string
+): Promise<Client | null> {
+  const { data, error } = await db
+    .from('clients')
+    .select('*')
+    .eq('id', clientId)
+    .single()
+
+  if (error || !data) return null
+  return data as Client
+}
+
 export async function getClientsByTrainer(
   db: SupabaseClient,
   trainerId: string
@@ -55,4 +69,30 @@ export async function getClientCount(
 
   if (error) throw new Error(`Failed to count clients: ${error.message}`)
   return count || 0
+}
+
+export interface ClientWithAllPlans {
+  id: string
+  trainer_id: string
+  name: string
+  email: string | null
+  form_data: Record<string, unknown>
+  created_at: string
+  plans: { id: string; status: PlanStatus; created_at: string; updated_at: string }[]
+}
+
+export async function getClientWithPlans(
+  db: SupabaseClient,
+  clientId: string,
+  trainerId: string
+): Promise<ClientWithAllPlans | null> {
+  const { data, error } = await db
+    .from('clients')
+    .select('id, trainer_id, name, email, form_data, created_at, plans(id, status, created_at, updated_at)')
+    .eq('id', clientId)
+    .eq('trainer_id', trainerId)
+    .single()
+
+  if (error || !data) return null
+  return data as unknown as ClientWithAllPlans
 }

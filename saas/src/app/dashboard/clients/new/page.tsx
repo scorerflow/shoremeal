@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -20,10 +20,15 @@ const STEP_FIELDS: Record<number, string[]> = {
 
 export default function NewClientPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const clientId = searchParams.get('clientId')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [step, setStep] = useState(1)
+  const [fetchingClient, setFetchingClient] = useState(false)
+  const [clientName, setClientName] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -46,6 +51,49 @@ export default function NewClientPage() {
     meal_prep_style: 'mixed',
   })
 
+  // Fetch client data if clientId is provided
+  useEffect(() => {
+    if (!clientId) return
+
+    const fetchClientData = async () => {
+      setFetchingClient(true)
+      try {
+        const response = await fetch(`/api/clients/${clientId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setClientName(data.name)
+          setFormData({
+            name: data.name || '',
+            age: String(data.age || ''),
+            gender: data.gender || 'M',
+            height: data.height || '',
+            weight: data.weight || '',
+            ideal_weight: data.ideal_weight || '',
+            activity_level: data.activity_level || 'moderately_active',
+            goal: data.goal || 'fat_loss',
+            dietary_type: data.dietary_type || 'omnivore',
+            allergies: data.allergies || '',
+            dislikes: data.dislikes || '',
+            preferences: data.preferences || '',
+            budget: data.budget || '£70',
+            cooking_skill: data.cooking_skill || 'intermediate',
+            prep_time: data.prep_time || '30',
+            meals_per_day: data.meals_per_day || '3',
+            plan_duration: data.plan_duration || '7',
+            meal_prep_style: data.meal_prep_style || 'mixed',
+          })
+        }
+      } catch (err) {
+        // Silently fail and show empty form
+        console.error('Failed to fetch client data:', err)
+      } finally {
+        setFetchingClient(false)
+      }
+    }
+
+    fetchClientData()
+  }, [clientId])
+
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     if (fieldErrors[field]) {
@@ -57,21 +105,20 @@ export default function NewClientPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (step !== 4) {
-      setStep(step + 1)
-      return
-    }
+  const handleGenerate = async () => {
     setLoading(true)
     setError(null)
     setFieldErrors({})
 
     try {
+      const payload = clientId
+        ? { ...formData, clientId }
+        : formData
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const data = await response.json()
@@ -106,48 +153,61 @@ export default function NewClientPage() {
       </div>
 
       <div className="card">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Create Nutrition Plan</h1>
-        <p className="text-gray-600 mb-6">
-          Enter your client&apos;s information to generate a personalised nutrition plan.
-        </p>
-
-        <FormProgress currentStep={step} totalSteps={4} onStepClick={setStep} />
-
-        {error && <AlertBanner variant="error" className="mb-6">{error}</AlertBanner>}
-
-        <form onSubmit={handleSubmit}>
-          {step === 1 && <PersonalInfoStep formData={formData} onChange={updateField} errors={fieldErrors} />}
-          {step === 2 && <ActivityGoalsStep formData={formData} onChange={updateField} errors={fieldErrors} />}
-          {step === 3 && <DietaryStep formData={formData} onChange={updateField} errors={fieldErrors} />}
-          {step === 4 && <PracticalDetailsStep formData={formData} onChange={updateField} errors={fieldErrors} />}
-
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-            {step > 1 ? (
-              <button type="button" onClick={() => setStep(step - 1)} className="btn-secondary">
-                Previous
-              </button>
-            ) : (
-              <div />
-            )}
-
-            {step < 4 ? (
-              <button type="button" onClick={() => setStep(step + 1)} className="btn-primary">
-                Next
-              </button>
-            ) : (
-              <button type="submit" disabled={loading} className="btn-primary flex items-center disabled:opacity-50">
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Generate Plan'
-                )}
-              </button>
-            )}
+        {fetchingClient ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600">Loading client data...</span>
           </div>
-        </form>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {clientName ? `New Plan for ${clientName}` : 'Create Nutrition Plan'}
+            </h1>
+            <p className="text-gray-600 mb-6">
+              {clientName
+                ? 'Review and update the information below to generate a new nutrition plan.'
+                : 'Enter your client\'s information to generate a personalised nutrition plan.'}
+            </p>
+
+            <FormProgress currentStep={step} totalSteps={4} onStepClick={setStep} />
+
+            {error && <AlertBanner variant="error" className="mb-6">{error}</AlertBanner>}
+
+            <div>
+              {step === 1 && <PersonalInfoStep formData={formData} onChange={updateField} errors={fieldErrors} />}
+              {step === 2 && <ActivityGoalsStep formData={formData} onChange={updateField} errors={fieldErrors} />}
+              {step === 3 && <DietaryStep formData={formData} onChange={updateField} errors={fieldErrors} />}
+              {step === 4 && <PracticalDetailsStep formData={formData} onChange={updateField} errors={fieldErrors} />}
+
+              <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+                {step > 1 ? (
+                  <button type="button" onClick={() => setStep(step - 1)} className="btn-secondary">
+                    Previous
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                {step < 4 ? (
+                  <button type="button" onClick={() => setStep(step + 1)} className="btn-primary">
+                    Next
+                  </button>
+                ) : (
+                  <button type="button" disabled={loading} onClick={handleGenerate} className="btn-primary flex items-center disabled:opacity-50">
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Generate Plan'
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

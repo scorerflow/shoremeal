@@ -4,6 +4,8 @@ export type AuditAction =
   | 'plan.generation_started'
   | 'plan.generation_completed'
   | 'plan.generation_failed'
+  | 'plan.generation_timeout'
+  | 'plan.retry_requested'
   | 'subscription.created'
   | 'subscription.updated'
   | 'subscription.cancelled'

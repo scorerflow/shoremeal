@@ -45,8 +45,8 @@ export interface MockPlan {
 
 // Default trainer for DEV_MODE
 export const DEV_TRAINER: MockTrainer = {
-  id: 'dev-user',
-  email: 'demo@nutriplanpro.com',
+  id: '00000000-0000-0000-0000-000000000001',
+  email: 'dev@nutriplan.test',
   full_name: 'David Scorer',
   business_name: 'Shore Fitness',
   subscription_tier: 'pro',
@@ -58,7 +58,7 @@ export const DEV_TRAINER: MockTrainer = {
 // Default branding for DEV_MODE
 export const DEV_BRANDING: MockBranding = {
   id: 'dev-branding',
-  trainer_id: 'dev-user',
+  trainer_id: '00000000-0000-0000-0000-000000000001',
   logo_url: null,
   primary_colour: '#2C5F2D',
   secondary_colour: '#4A7C4E',
