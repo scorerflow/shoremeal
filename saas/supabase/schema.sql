@@ -156,28 +156,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- View for dashboard stats
-CREATE OR REPLACE VIEW trainer_stats AS
-SELECT
-    t.id,
-    t.plans_used_this_month,
-    CASE
-        WHEN t.subscription_tier = 'starter' THEN 10
-        WHEN t.subscription_tier = 'pro' THEN 30
-        WHEN t.subscription_tier = 'agency' THEN 100
-        ELSE 0
-    END as plans_limit,
-    COUNT(DISTINCT c.id) as total_clients,
-    COUNT(DISTINCT p.id) as total_plans,
-    COALESCE(SUM(p.generation_cost), 0) as total_cost
-FROM trainers t
-LEFT JOIN clients c ON c.trainer_id = t.id
-LEFT JOIN plans p ON p.trainer_id = t.id
-GROUP BY t.id, t.plans_used_this_month, t.subscription_tier;
-
--- Grant access to the view
-GRANT SELECT ON trainer_stats TO authenticated;
-
 -- ============================================================
 -- Migration: Scalability & Security Architecture
 -- ============================================================
