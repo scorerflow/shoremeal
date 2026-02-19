@@ -1,4 +1,4 @@
-# NutriPlan Pro - SaaS Platform
+# Forzafed - SaaS Platform
 
 Professional nutrition plan generator for personal trainers and nutritionists.
 

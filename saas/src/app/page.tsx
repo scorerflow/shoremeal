@@ -54,7 +54,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-              <span className="text-2xl font-bold text-primary-800">NutriPlan Pro</span>
+              <span className="text-2xl font-bold text-primary-800">Forzafed</span>
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login" className="text-gray-600 hover:text-gray-900">
@@ -210,7 +210,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
-              <span className="text-xl font-bold text-white">NutriPlan Pro</span>
+              <span className="text-xl font-bold text-white">Forzafed</span>
               <p className="text-sm mt-1">Professional nutrition plans made simple</p>
             </div>
             <div className="flex space-x-6 text-sm">
@@ -220,7 +220,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-            © {new Date().getFullYear()} NutriPlan Pro. All rights reserved.
+            © {new Date().getFullYear()} Forzafed. All rights reserved.
           </div>
         </div>
       </footer>

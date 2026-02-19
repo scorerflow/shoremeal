@@ -1,6 +1,6 @@
 # ✅ Testing Infrastructure Setup Complete
 
-Production-grade testing infrastructure installed for NutriPlan Pro.
+Production-grade testing infrastructure installed for Forzafed.
 
 ## What Was Built
 
@@ -66,7 +66,7 @@ tests/
 
 1. Go to https://supabase.com/dashboard
 2. Click "New Project"
-3. Name it "nutriplan-test" (or similar)
+3. Name it "forzafed-test" (or similar)
 4. Select a region (same as prod recommended)
 5. Wait for project to be ready
 6. Copy credentials:

@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-Production-grade testing setup for NutriPlan Pro SaaS.
+Production-grade testing setup for Forzafed SaaS.
 
 ## Setup
 
@@ -9,7 +9,7 @@ Production-grade testing setup for NutriPlan Pro SaaS.
 **DO NOT use your production database for tests!**
 
 1. Go to https://supabase.com/dashboard
-2. Create a new project called "nutriplan-test"
+2. Create a new project called "forzafed-test"
 3. Copy the connection details
 
 ### 2. Configure Test Environment

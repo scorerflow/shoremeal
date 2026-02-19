@@ -48,7 +48,7 @@ export default function SignupPage() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold text-primary-800">
-            NutriPlan Pro
+            Forzafed
           </Link>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Create your account

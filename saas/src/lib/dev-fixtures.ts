@@ -46,7 +46,7 @@ export interface MockPlan {
 // Default trainer for DEV_MODE
 export const DEV_TRAINER: MockTrainer = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: 'dev@nutriplan.test',
+  email: 'dev@forzafed.test',
   full_name: 'David Scorer',
   business_name: 'Shore Fitness',
   subscription_tier: 'pro',

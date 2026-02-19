@@ -57,7 +57,7 @@ export async function createCustomer(email: string, name?: string) {
     email,
     name,
     metadata: {
-      source: 'nutriplan_pro',
+      source: 'forzafed_pro',
     },
   })
 

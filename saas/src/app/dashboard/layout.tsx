@@ -27,7 +27,7 @@ export default async function DashboardLayout({
           {/* Logo */}
           <div className="p-6 border-b border-gray-200">
             <Link href="/dashboard" className="text-xl font-bold text-primary-800">
-              NutriPlan Pro
+              Forzafed
             </Link>
           </div>
 
@@ -77,7 +77,7 @@ export default async function DashboardLayout({
       <header className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="text-xl font-bold text-primary-800">
-            NutriPlan Pro
+            Forzafed
           </Link>
           {/* Mobile menu button would go here */}
         </div>

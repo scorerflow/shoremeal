@@ -49,7 +49,7 @@ jobs:
         with:
           files: ./saas/coverage/coverage-final.json
           flags: unittests
-          name: nutriplan-pro
+          name: forzafed-pro
         continue-on-error: true
 
   lint:

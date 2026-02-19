@@ -17,7 +17,7 @@ import { resolve } from 'path'
 config({ path: resolve(__dirname, '../.env.local') })
 
 const DEV_USER_ID = '00000000-0000-0000-0000-000000000001'
-const DEV_USER_EMAIL = 'dev@nutriplan.test'
+const DEV_USER_EMAIL = 'dev@forzafed.test'
 const DEV_USER_PASSWORD = 'devpassword123'
 
 async function seed() {

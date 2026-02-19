@@ -1,4 +1,4 @@
--- NutriPlan Pro Database Schema
+-- Forzafed Database Schema
 -- Run this in Supabase SQL Editor
 
 -- Enable UUID extension

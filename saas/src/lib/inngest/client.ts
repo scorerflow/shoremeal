@@ -12,6 +12,6 @@ type Events = {
   }
 }
 
-export const inngest = new Inngest({ id: 'nutriplan-pro' })
+export const inngest = new Inngest({ id: 'forzafed-pro' })
 
 export type { Events }
