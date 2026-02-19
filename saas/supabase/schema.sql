@@ -72,40 +72,40 @@ ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
 
 -- Trainers can only see their own data
 CREATE POLICY "Trainers can view own profile" ON trainers
-    FOR SELECT USING (auth.uid() = id);
+    FOR SELECT USING ((select auth.uid()) = id);
 
 CREATE POLICY "Trainers can update own profile" ON trainers
-    FOR UPDATE USING (auth.uid() = id);
+    FOR UPDATE USING ((select auth.uid()) = id);
 
 -- Branding policies
 CREATE POLICY "Trainers can view own branding" ON branding
-    FOR SELECT USING (auth.uid() = trainer_id);
+    FOR SELECT USING ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can insert own branding" ON branding
-    FOR INSERT WITH CHECK (auth.uid() = trainer_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can update own branding" ON branding
-    FOR UPDATE USING (auth.uid() = trainer_id);
+    FOR UPDATE USING ((select auth.uid()) = trainer_id);
 
 -- Clients policies
 CREATE POLICY "Trainers can view own clients" ON clients
-    FOR SELECT USING (auth.uid() = trainer_id);
+    FOR SELECT USING ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can insert own clients" ON clients
-    FOR INSERT WITH CHECK (auth.uid() = trainer_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can update own clients" ON clients
-    FOR UPDATE USING (auth.uid() = trainer_id);
+    FOR UPDATE USING ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can delete own clients" ON clients
-    FOR DELETE USING (auth.uid() = trainer_id);
+    FOR DELETE USING ((select auth.uid()) = trainer_id);
 
 -- Plans policies
 CREATE POLICY "Trainers can view own plans" ON plans
-    FOR SELECT USING (auth.uid() = trainer_id);
+    FOR SELECT USING ((select auth.uid()) = trainer_id);
 
 CREATE POLICY "Trainers can insert own plans" ON plans
-    FOR INSERT WITH CHECK (auth.uid() = trainer_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = trainer_id);
 
 -- Function to create trainer profile on signup
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -124,7 +124,8 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public;
 
 -- Trigger for new user signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -143,7 +144,8 @@ BEGIN
     WHERE billing_cycle_start < NOW() - INTERVAL '1 month'
        OR billing_cycle_start IS NULL;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Function to increment plan usage
 CREATE OR REPLACE FUNCTION increment_plan_usage(trainer_uuid UUID)
@@ -154,7 +156,8 @@ BEGIN
         updated_at = NOW()
     WHERE id = trainer_uuid;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- ============================================================
 -- Migration: Scalability & Security Architecture
@@ -205,7 +208,13 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);
 -- RLS on new tables: service role only
 ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
--- No user-facing policies - only service role can access these tables
+
+-- Explicit deny-all policies (service role bypasses RLS)
+CREATE POLICY "Service role only - no user access" ON audit_log
+    FOR ALL USING (false);
+
+CREATE POLICY "Service role only - no user access" ON webhook_events
+    FOR ALL USING (false);
 
 -- Function to increment plan attempts
 CREATE OR REPLACE FUNCTION increment_plan_attempts(plan_uuid UUID)
@@ -216,4 +225,5 @@ BEGIN
         updated_at = NOW()
     WHERE id = plan_uuid;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
