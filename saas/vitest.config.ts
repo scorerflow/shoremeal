@@ -22,12 +22,6 @@ export default defineConfig({
     },
     // Longer timeout for integration tests (Supabase calls)
     testTimeout: 15000,
-    // Run tests sequentially for RLS tests (avoid race conditions)
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
   },
   resolve: {
     alias: {
