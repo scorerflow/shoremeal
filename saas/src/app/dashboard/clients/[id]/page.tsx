@@ -174,7 +174,7 @@ export default async function ClientDetailPage({
                 <p className="text-gray-900">{client.form_data.meals_per_day} meals</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Meal Prep Style</p>
+                <p className="text-sm text-gray-500">Meal Variety</p>
                 <p className="text-gray-900">
                   {DISPLAY_LABELS.meal_prep_style[client.form_data.meal_prep_style] || client.form_data.meal_prep_style}
                 </p>

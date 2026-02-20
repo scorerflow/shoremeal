@@ -36,9 +36,9 @@ export const COOKING_SKILLS: SelectOption[] = [
 ]
 
 export const MEAL_PREP_STYLES: SelectOption[] = [
-  { value: 'daily', label: 'Daily (cook fresh each day)' },
-  { value: 'batch', label: 'Batch (prep meals in advance)' },
-  { value: 'mixed', label: 'Mixed (combination of both)' },
+  { value: 'daily', label: 'High variety (different meals daily)' },
+  { value: 'batch', label: 'Moderate variety (batch cooking - meals repeat every 2-3 days)' },
+  { value: 'mixed', label: 'Low variety (same meals all week)' },
 ]
 
 export const PLAN_DURATIONS: SelectOption[] = [

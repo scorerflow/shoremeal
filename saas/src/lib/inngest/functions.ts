@@ -138,12 +138,12 @@ DIETARY REQUIREMENTS:
 - Cuisine Preferences: ${data.preferences || 'Varied'}
 
 PRACTICAL CONSTRAINTS:
-- Weekly Budget: ${data.budget}
+- Weekly Budget: £${data.budget}
 - Cooking Skill: ${label('cooking_skill', data.cooking_skill)}
 - Available Prep Time: ${data.prep_time} minutes per day
 - Meals Per Day: ${data.meals_per_day}
 - Plan Duration: ${data.plan_duration} days
-- Meal Prep Style: ${label('meal_prep_style', data.meal_prep_style)}
+- Meal Variety: ${label('meal_prep_style', data.meal_prep_style)}
 
 Please create a comprehensive nutrition plan that includes:
 
@@ -160,8 +160,9 @@ Please create a comprehensive nutrition plan that includes:
    - Each day should include all meals (breakfast, lunch, dinner, snacks as needed)
    - Include portion sizes and estimated calories/macros per meal
    - Keep recipes within their cooking skill level and time constraints
-   - Consider budget constraints
+   - Consider budget constraints (weekly budget: £${data.budget})
    - Use British spelling and terminology
+   - MEAL VARIETY STRATEGY: ${data.meal_prep_style === 'daily' ? 'Provide different meals each day to maximise variety and enjoyment.' : data.meal_prep_style === 'batch' ? 'Design meals that repeat every 2-3 days to enable batch cooking. For example, the same breakfast for Days 1-3, same lunch for Days 1-3, then new meals for Days 4-6. This minimises prep time while maintaining nutritional balance.' : 'Keep meals simple and repeat frequently throughout the week to minimise cooking time and decision fatigue.'}
 
 3. **RECIPES**
    - Detailed recipes for each unique meal mentioned in the meal plan
@@ -175,17 +176,17 @@ Please create a comprehensive nutrition plan that includes:
 4. **SHOPPING LIST**
    - Organised by category (produce, proteins, dairy, pantry, etc.)
    - Quantities needed for the full ${data.plan_duration}-day plan
-   - Estimated cost breakdown to stay within ${data.budget} budget
+   - Estimated cost breakdown to stay within £${data.budget} weekly budget
    - Money-saving tips for staying within budget
    - Use UK terminology and £ for prices
 
 5. **MEAL PREP GUIDE**
-   - ${label('meal_prep_style', data.meal_prep_style)} meal prep strategy
+   - Strategy tailored to ${label('meal_prep_style', data.meal_prep_style).toLowerCase()} preference
    - What to prep in advance to save time during the week
    - Storage instructions and how long meals keep
    - Reheating guidelines for best results
    - Time-saving tips for efficient meal preparation
-   - Batch cooking suggestions
+   - ${data.meal_prep_style === 'batch' ? 'Batch cooking instructions: which meals to prepare together, optimal cooking order, and portion/storage guidance' : 'Practical tips for managing meal variety efficiently'}
 
 6. **ADDITIONAL TIPS & ADVICE**
    - Hydration recommendations for optimal performance and recovery

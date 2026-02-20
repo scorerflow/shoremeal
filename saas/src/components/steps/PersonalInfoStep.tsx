@@ -33,7 +33,7 @@ export function PersonalInfoStep({
 
       <div className="grid grid-cols-2 gap-4">
         <FormField
-          label="Age *"
+          label="Age (years) *"
           name="age"
           value={formData.age}
           onChange={onChange}
@@ -42,7 +42,7 @@ export function PersonalInfoStep({
           required
           min="16"
           max="100"
-          placeholder="e.g., 35"
+          placeholder="e.g., 28"
         />
         <SelectField
           label="Gender *"
@@ -55,33 +55,33 @@ export function PersonalInfoStep({
       </div>
 
       <FormField
-        label="Height *"
+        label="Height (cm) *"
         name="height"
         value={formData.height}
         onChange={onChange}
         error={errors.height}
         required
-        placeholder="e.g., 175cm or 5'9&quot;"
+        placeholder="e.g., 175"
       />
 
       <div className="grid grid-cols-2 gap-4">
         <FormField
-          label="Current Weight *"
+          label="Current Weight (kg) *"
           name="weight"
           value={formData.weight}
           onChange={onChange}
           error={errors.weight}
           required
-          placeholder="e.g., 80kg"
+          placeholder="e.g., 80"
         />
         <FormField
-          label="Goal Weight *"
+          label="Goal Weight (kg) *"
           name="ideal_weight"
           value={formData.ideal_weight}
           onChange={onChange}
           error={errors.ideal_weight}
           required
-          placeholder="e.g., 72kg"
+          placeholder="e.g., 72"
         />
       </div>
     </div>

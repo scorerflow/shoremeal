@@ -19,13 +19,13 @@ export function PracticalDetailsStep({
 
       <div className="grid grid-cols-2 gap-4">
         <FormField
-          label="Weekly Budget *"
+          label="Weekly Budget (£) *"
           name="budget"
           value={formData.budget}
           onChange={onChange}
           error={errors.budget}
           required
-          placeholder="e.g., £70"
+          placeholder="e.g., 70"
         />
         <SelectField
           label="Cooking Skill *"
@@ -61,7 +61,7 @@ export function PracticalDetailsStep({
 
       <div className="grid grid-cols-2 gap-4">
         <SelectField
-          label="Plan Duration *"
+          label="Plan Duration (days) *"
           name="plan_duration"
           value={formData.plan_duration}
           onChange={onChange}
@@ -69,7 +69,7 @@ export function PracticalDetailsStep({
           error={errors.plan_duration}
         />
         <SelectField
-          label="Meal Prep Style *"
+          label="Meal Variety *"
           name="meal_prep_style"
           value={formData.meal_prep_style}
           onChange={onChange}
