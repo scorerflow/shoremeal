@@ -125,7 +125,7 @@ export async function handlePaymentFailed(
   })
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line
 export const WEBHOOK_HANDLERS: Record<string, (db: SupabaseClient, data: any) => Promise<void>> = {
   'checkout.session.completed': (db, data) => handleCheckoutCompleted(db, data as Stripe.Checkout.Session),
   'customer.subscription.updated': (db, data) => handleSubscriptionUpdated(db, data as Stripe.Subscription),

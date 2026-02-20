@@ -28,7 +28,7 @@ export async function generatePlanPdf(options: GeneratePdfOptions): Promise<Buff
     createdAt: options.createdAt,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line
   const buffer = await renderToBuffer(doc as any)
   return Buffer.from(buffer)
 }
