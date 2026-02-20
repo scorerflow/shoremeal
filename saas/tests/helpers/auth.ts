@@ -17,7 +17,7 @@ export interface TestUser {
  * Create a test user with email/password
  */
 export async function createTestUser(
-  email: string = `test-${Date.now()}-${Math.random().toString(36).slice(2)}@test.test`,
+  email: string = `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
   password: string = 'TestPassword123!'
 ): Promise<TestUser> {
   const supabase = createTestClient()
