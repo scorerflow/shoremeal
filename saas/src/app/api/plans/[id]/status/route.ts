@@ -31,7 +31,7 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
     // Fetch plan with RLS applied (automatically filters by trainer_id)
     const { data: plan, error: planError } = await supabase
       .from('plans')
-      .select('id, status, created_at, trainer_id, error_message, attempts')
+      .select('id, status, created_at, trainer_id, error_message, attempts, plan_text, clients(name)')
       .eq('id', planId)
       .single()
 
@@ -97,7 +97,7 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
     const now = new Date()
     const elapsedSeconds = Math.floor((now.getTime() - createdAt.getTime()) / 1000)
 
-    // Return status with queue metrics
+    // Return status with queue metrics and plan data
     return NextResponse.json({
       id: plan.id,
       status: plan.status,
@@ -107,6 +107,10 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
       elapsedSeconds,
       errorMessage: plan.error_message || null,
       attempts: plan.attempts || 0,
+      plan_text: plan.plan_text || null,
+      client_name: plan.clients?.[0]?.name || null,
+      created_at: plan.created_at,
+      updated_at: plan.updated_at,
     })
 
   } catch (error) {

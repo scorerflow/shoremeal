@@ -149,6 +149,12 @@ describe('Plan Status API', () => {
         estimatedMinutes: 0,
       })
       expect(data.elapsedSeconds).toBeGreaterThanOrEqual(0)
+
+      // Critical: Verify plan data is returned (this would have caught the bug!)
+      expect(data.plan_text).toBe('Mock plan content')
+      expect(data.client_name).toBe('Test Client')
+      expect(data.created_at).toBeDefined()
+      expect(data.updated_at).toBeDefined()
     })
 
     it('should calculate queue position for pending plan', async () => {
@@ -215,6 +221,10 @@ describe('Plan Status API', () => {
       expect(data.queuePosition).toBe(3) // 3rd in queue
       expect(data.totalInQueue).toBeGreaterThanOrEqual(3)
       expect(data.estimatedMinutes).toBeGreaterThan(0)
+
+      // Pending plans should not have plan_text yet
+      expect(data.plan_text).toBeNull()
+      expect(data.client_name).toBe('Test Client')
     })
 
     it('should include generating plans in queue count', async () => {
