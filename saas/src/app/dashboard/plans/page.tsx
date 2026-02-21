@@ -5,10 +5,19 @@ import { EmptyState } from '@/components/EmptyState'
 import { StatusPill, getStatusConfig } from '@/components/StatusBadge'
 import { requireAuth } from '@/lib/auth'
 import { getPlansList } from '@/lib/data/plans-list'
+import { getTrainerById } from '@/lib/repositories/trainers'
+import { SubscriptionTier } from '@/types'
 
 export default async function PlansPage() {
   const { user, supabase } = await requireAuth()
-  const plans = await getPlansList(supabase, user.id)
+  const [plans, trainer] = await Promise.all([
+    getPlansList(supabase, user.id),
+    getTrainerById(supabase, user.id),
+  ])
+
+  const DEV_MODE = process.env.DEV_MODE === 'true'
+  const tier = trainer?.subscription_tier as SubscriptionTier | null
+  const hasSubscription = DEV_MODE || (tier && trainer?.subscription_status === 'active')
 
   return (
     <div>
@@ -16,10 +25,16 @@ export default async function PlansPage() {
         title="Plans"
         subtitle={`${plans.length} nutrition plan${plans.length !== 1 ? 's' : ''} generated`}
         action={
-          <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
-            <Plus className="h-5 w-5 mr-2" />
-            New Plan
-          </Link>
+          hasSubscription ? (
+            <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
+              <Plus className="h-5 w-5 mr-2" />
+              New Plan
+            </Link>
+          ) : (
+            <Link href="/pricing" className="btn-accent flex items-center">
+              Upgrade to Create Plans
+            </Link>
+          )
         }
       />
 
@@ -27,9 +42,9 @@ export default async function PlansPage() {
         <EmptyState
           icon={<FileText className="h-12 w-12 text-gray-300" />}
           heading="No plans yet"
-          description="Create your first nutrition plan for a client."
-          actionLabel="Create First Plan"
-          actionHref="/dashboard/clients/new"
+          description={hasSubscription ? "Create your first nutrition plan for a client." : "Subscribe to start generating nutrition plans."}
+          actionLabel={hasSubscription ? "Create First Plan" : "View Pricing"}
+          actionHref={hasSubscription ? "/dashboard/clients/new" : "/pricing"}
         />
       ) : (
         <div className="space-y-3">
