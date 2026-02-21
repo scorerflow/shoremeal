@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
+import { QueueStatus } from '@/components/QueueStatus'
 import { APP_CONFIG } from '@/lib/config'
 
 type PlanStatus = 'pending' | 'generating' | 'completed' | 'failed'
@@ -209,9 +210,21 @@ export default function PlanDetailPage() {
         )}
       </div>
 
-      {/* Status banner */}
+      {/* Status banner with queue info */}
       <div className="mb-6">
-        <StatusBanner status={plan.status} />
+        {(plan.status === 'pending' || plan.status === 'generating') ? (
+          <QueueStatus
+            planId={planId}
+            initialStatus={plan.status}
+            onStatusChange={(newStatus) => {
+              if (newStatus === 'completed' || newStatus === 'failed') {
+                fetchStatus() // Refresh plan data
+              }
+            }}
+          />
+        ) : (
+          <StatusBanner status={plan.status} />
+        )}
       </div>
 
       {/* Polling timeout warning */}
