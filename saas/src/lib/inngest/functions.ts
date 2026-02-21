@@ -6,6 +6,7 @@ import { updatePlanStatus } from '@/lib/repositories/plans'
 import { incrementPlansUsed } from '@/lib/repositories/trainers'
 import { APP_CONFIG } from '@/lib/config'
 import { DISPLAY_LABELS } from '@/lib/constants'
+import { stripEmojis, parsePlanText } from '@/lib/pdf/parse-plan'
 import type { ClientFormData } from '@/types'
 
 function getSupabase() {
@@ -64,9 +65,23 @@ export const generatePlan = inngest.createFunction(
         messages: [{ role: 'user', content: prompt }],
       })
 
-      const planText = message.content[0].type === 'text'
+      const rawPlanText = message.content[0].type === 'text'
         ? message.content[0].text
         : ''
+
+      // Strip emojis from plan text before saving to database
+      const planText = stripEmojis(rawPlanText)
+
+      // Validate plan structure: ensure it has parseable sections
+      // This prevents silent failures where PDF only shows cover page
+      const parsed = parsePlanText(planText)
+      if (parsed.sections.length === 0) {
+        throw new Error(
+          'Plan generation failed: No sections found in generated plan. ' +
+          'Claude may not have used H1 headings for sections. ' +
+          'This will trigger a retry with a fresh generation attempt.'
+        )
+      }
 
       const inputCost = (message.usage.input_tokens / 1_000_000) * APP_CONFIG.claude.pricing.inputPerMillion
       const outputCost = (message.usage.output_tokens / 1_000_000) * APP_CONFIG.claude.pricing.outputPerMillion
@@ -146,6 +161,8 @@ PRACTICAL CONSTRAINTS:
 - Meal Variety: ${label('meal_prep_style', data.meal_prep_style)}
 
 Please create a comprehensive nutrition plan that includes:
+
+IMPORTANT: Structure your response using clear markdown headings for each major section. Use single # for main sections (e.g., "# Nutritional Analysis"), ## for subsections, and ### for sub-subsections. This helps with PDF formatting.
 
 1. **NUTRITIONAL ANALYSIS**
    - Calculate optimal daily calories based on their current weight, ideal weight, and activity level
