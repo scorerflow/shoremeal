@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { withAuth } from '@/lib/auth'
+import { handleRouteError } from '@/lib/errors'
 
 /**
  * GET /api/plans/[id]/status
@@ -7,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
  * Returns real-time plan status with queue position and time estimates
  *
  * Security:
- * - Requires authentication
+ * - Requires authentication (via withAuth)
  * - RLS enforces user can only see their own plans
  * - Returns 403 if attempting to access another user's plan
  *
@@ -23,23 +24,9 @@ import { createClient } from '@/lib/supabase/server'
  *   attempts: number
  * }
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const GET = withAuth(async (request: NextRequest, { user, supabase }, params) => {
   try {
-    const supabase = await createClient()
-    const planId = params.id
-
-    // Auth check: Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const planId = params?.id as string
 
     // Fetch plan with RLS applied (automatically filters by trainer_id)
     const { data: plan, error: planError } = await supabase
@@ -123,11 +110,6 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('[Queue Status API] Error:', error)
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return handleRouteError(error, 'queue-status')
   }
-}
+})
