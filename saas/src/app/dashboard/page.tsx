@@ -11,12 +11,13 @@ export default async function DashboardPage() {
   const { user, supabase } = await requireAuth()
   const { trainer, clientCount, planCount } = await getDashboardData(supabase, user.id)
 
+  const DEV_MODE = process.env.DEV_MODE === 'true'
   const tier = trainer?.subscription_tier as SubscriptionTier | null
   const plansLimit = tier ? TIERS[tier].plansPerMonth : 0
   const plansUsed = trainer?.plans_used_this_month || 0
   const plansRemaining = Math.max(0, plansLimit - plansUsed)
 
-  const hasSubscription = tier && trainer?.subscription_status === 'active'
+  const hasSubscription = DEV_MODE || (tier && trainer?.subscription_status === 'active')
 
   return (
     <div>
