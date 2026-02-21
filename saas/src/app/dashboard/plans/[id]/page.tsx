@@ -1,14 +1,26 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
 import { QueueStatus } from '@/components/QueueStatus'
 import { APP_CONFIG } from '@/lib/config'
+import remarkGfm from 'remark-gfm'
+
+// Code-split react-markdown - only load when plan is completed
+const ReactMarkdown = dynamic(() => import('react-markdown'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-8">
+      <Loader2 className="h-6 w-6 animate-spin text-primary-800" />
+    </div>
+  ),
+  ssr: false, // Client-side only for better performance
+})
 
 type PlanStatus = 'pending' | 'generating' | 'completed' | 'failed'
 
@@ -32,6 +44,17 @@ export default function PlanDetailPage() {
   const [pollingTimeout, setPollingTimeout] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const pollCountRef = useRef(0)
+
+  // Memoize markdown rendering to prevent unnecessary re-parsing
+  const renderedMarkdown = useMemo(() => {
+    if (!plan?.plan_text) return null
+
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {plan.plan_text}
+      </ReactMarkdown>
+    )
+  }, [plan?.plan_text])
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -259,10 +282,77 @@ export default function PlanDetailPage() {
             <FileText className="h-5 w-5 text-primary-800" />
             <h2 className="text-lg font-semibold text-gray-900">Plan Details</h2>
           </div>
-          <div className="prose prose-sm max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {plan.plan_text}
-            </div>
+          <div className="prose prose-lg max-w-none markdown-content">
+            <style jsx>{`
+              .markdown-content :global(h1) {
+                font-size: 2rem;
+                font-weight: 700;
+                margin-top: 3rem;
+                margin-bottom: 1.5rem;
+                color: #111827;
+              }
+              .markdown-content :global(h2) {
+                font-size: 1.5rem;
+                font-weight: 600;
+                margin-top: 2.5rem;
+                margin-bottom: 1.25rem;
+                color: #111827;
+              }
+              .markdown-content :global(h3) {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-top: 2rem;
+                margin-bottom: 1rem;
+                color: #374151;
+              }
+              .markdown-content :global(p) {
+                margin-bottom: 1.25rem;
+                line-height: 1.75;
+                color: #4b5563;
+              }
+              .markdown-content :global(blockquote) {
+                border-left: 4px solid #22c55e;
+                background-color: #f9fafb;
+                padding: 1.5rem;
+                margin: 2rem 0;
+                font-style: italic;
+                border-radius: 0.375rem;
+              }
+              .markdown-content :global(hr) {
+                margin: 3rem 0;
+                border-top: 2px solid #e5e7eb;
+              }
+              .markdown-content :global(table) {
+                width: 100%;
+                margin: 2rem 0;
+                border-collapse: collapse;
+              }
+              .markdown-content :global(th) {
+                background-color: #f3f4f6;
+                padding: 0.75rem 1rem;
+                text-align: left;
+                font-weight: 600;
+                border: 1px solid #e5e7eb;
+              }
+              .markdown-content :global(td) {
+                padding: 0.75rem 1rem;
+                border: 1px solid #e5e7eb;
+              }
+              .markdown-content :global(ul),
+              .markdown-content :global(ol) {
+                margin: 1.5rem 0;
+                padding-left: 2rem;
+              }
+              .markdown-content :global(li) {
+                margin: 0.5rem 0;
+                line-height: 1.75;
+              }
+              .markdown-content :global(strong) {
+                font-weight: 600;
+                color: #111827;
+              }
+            `}</style>
+            {renderedMarkdown}
           </div>
         </div>
       )}
