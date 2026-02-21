@@ -48,9 +48,12 @@ export async function requestPlanGeneration(
   let client
   let clientId: string
 
+  // In DEV_MODE, use service client to bypass RLS (no real auth session)
+  const clientDb = DEV_MODE ? await createServiceClient() : supabase
+
   // If clientId is provided, use the existing client; otherwise create a new one
   if (formData.clientId) {
-    const existingClient = await getClientById(supabase, formData.clientId)
+    const existingClient = await getClientById(clientDb, formData.clientId)
 
     if (!existingClient || existingClient.trainer_id !== userId) {
       throw new AppError('Client not found', 'FORBIDDEN', 404)
@@ -59,7 +62,7 @@ export async function requestPlanGeneration(
     client = existingClient
     clientId = existingClient.id
   } else {
-    client = await createClientRecord(supabase, {
+    client = await createClientRecord(clientDb, {
       trainer_id: userId,
       name: formData.name,
       form_data: formData as unknown as Record<string, unknown>,
