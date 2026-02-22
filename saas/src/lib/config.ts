@@ -52,12 +52,24 @@ export const APP_CONFIG = {
   // App URLs
   appUrl: validateUrl('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL),
 
-  // Stripe Configuration (only validate if not in DEV_MODE)
+  // Stripe Configuration (server-side only, skip validation on client)
   stripe: (() => {
+    const isServer = typeof window === 'undefined'
     const devMode = process.env.DEV_MODE === 'true'
 
+    // On client-side, return dummy values (not used in browser)
+    if (!isServer) {
+      return {
+        priceIds: {
+          starter: 'price_client',
+          pro: 'price_client',
+          agency: 'price_client',
+        },
+      }
+    }
+
+    // On server-side, validate unless in DEV_MODE
     if (devMode) {
-      // In DEV_MODE, Stripe is not required
       return {
         priceIds: {
           starter: process.env.STRIPE_PRICE_STARTER || 'price_dev_starter',
@@ -67,7 +79,7 @@ export const APP_CONFIG = {
       }
     }
 
-    // In production, validate all Stripe config
+    // Production: validate all Stripe config
     return {
       priceIds: {
         starter: validateStripePrice('STRIPE_PRICE_STARTER', process.env.STRIPE_PRICE_STARTER),
