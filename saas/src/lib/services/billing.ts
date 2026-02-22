@@ -4,6 +4,7 @@ import type { PriceTier } from '@/lib/stripe'
 import { getTrainerForCheckout, getTrainerStripeId, updateStripeCustomerId } from '@/lib/repositories/trainers'
 import { writeAuditLog } from '@/lib/audit'
 import { AppError } from '@/lib/errors'
+import { APP_CONFIG } from '@/lib/config'
 
 export async function initiateCheckout(
   supabase: SupabaseClient,
@@ -37,8 +38,8 @@ export async function initiateCheckout(
         quantity: 1,
       },
     ],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL?.trim()}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL?.trim()}/pricing?cancelled=true`,
+    success_url: `${APP_CONFIG.appUrl}/dashboard?success=true`,
+    cancel_url: `${APP_CONFIG.appUrl}/pricing?cancelled=true`,
     allow_promotion_codes: true,
     subscription_data: {
       metadata: {
@@ -64,7 +65,7 @@ export async function createBillingPortal(
 
   const session = await createCustomerPortalSession(
     stripeCustomerId,
-    `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
+    `${APP_CONFIG.appUrl}/dashboard`
   )
 
   writeAuditLog({

@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { APP_CONFIG } from '@/lib/config'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -6,9 +7,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export const PRICE_IDS = {
-  starter: process.env.STRIPE_PRICE_STARTER!,
-  pro: process.env.STRIPE_PRICE_PRO!,
-  agency: process.env.STRIPE_PRICE_AGENCY!,
+  starter: APP_CONFIG.stripe.priceIds.starter,
+  pro: APP_CONFIG.stripe.priceIds.pro,
+  agency: APP_CONFIG.stripe.priceIds.agency,
 } as const
 
 export type PriceTier = keyof typeof PRICE_IDS
