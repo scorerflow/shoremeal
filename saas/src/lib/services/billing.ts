@@ -37,8 +37,8 @@ export async function initiateCheckout(
         quantity: 1,
       },
     ],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?cancelled=true`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL?.trim()}/dashboard?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL?.trim()}/pricing?cancelled=true`,
     allow_promotion_codes: true,
     subscription_data: {
       metadata: {
