@@ -48,9 +48,15 @@ function validateOptional(value: string | undefined, defaultValue: string): stri
 // App Configuration (Validated)
 // ============================================================================
 
+// In test mode, use sensible defaults and skip strict validation
+// This allows tests to run without requiring all production env vars
+const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
+
 export const APP_CONFIG = {
   // App URLs
-  appUrl: validateUrl('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL),
+  appUrl: isTest
+    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    : validateUrl('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL),
 
   // Stripe Configuration (server-side only, skip validation on client)
   stripe: (() => {
