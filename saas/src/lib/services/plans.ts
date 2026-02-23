@@ -47,6 +47,7 @@ export async function requestPlanGeneration(
 
   let client
   let clientId: string
+  let planFormData: Record<string, unknown>
 
   // In DEV_MODE, use service client to bypass RLS (no real auth session)
   const clientDb = DEV_MODE ? await createServiceClient() : supabase
@@ -61,6 +62,11 @@ export async function requestPlanGeneration(
 
     client = existingClient
     clientId = existingClient.id
+    // Use client's stored data as single source of truth
+    planFormData = {
+      ...existingClient.form_data,
+      name: existingClient.name,
+    }
   } else {
     client = await createClientRecord(clientDb, {
       trainer_id: userId,
@@ -68,6 +74,8 @@ export async function requestPlanGeneration(
       form_data: formData as unknown as Record<string, unknown>,
     })
     clientId = client.id
+    // Use form data as provided
+    planFormData = formData as unknown as Record<string, unknown>
   }
 
   // Service client for plan creation (bypasses RLS for nullable fields)
@@ -84,7 +92,7 @@ export async function requestPlanGeneration(
       planId: plan.id,
       clientId: clientId,
       trainerId: userId,
-      formData: formData as unknown as Record<string, unknown>,
+      formData: planFormData,
       businessName,
     },
   })

@@ -82,9 +82,9 @@ export default async function ClientDetailPage({
               <Edit className="h-5 w-5 mr-2" />
               Edit Client
             </Link>
-            <Link href={`/dashboard/clients/new?clientId=${client.id}`} className="btn-primary flex items-center">
+            <Link href={`/dashboard/clients/${client.id}/generate-plan`} className="btn-primary flex items-center">
               <Plus className="h-5 w-5 mr-2" />
-              Generate New Plan
+              Generate Plan
             </Link>
           </div>
         }
@@ -268,8 +268,8 @@ export default async function ClientDetailPage({
                 icon={<FileText className="h-12 w-12 text-gray-300" />}
                 heading="No plans yet"
                 description="Generate your first plan for this client"
-                actionLabel="Create Plan"
-                actionHref={`/dashboard/clients/new?clientId=${client.id}`}
+                actionLabel="Generate Plan"
+                actionHref={`/dashboard/clients/${client.id}/generate-plan`}
               />
             ) : (
               <div className="space-y-3">
