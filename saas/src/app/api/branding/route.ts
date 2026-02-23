@@ -5,6 +5,7 @@ import { updateTrainerBranding } from '@/lib/services/branding'
 import { z } from 'zod'
 
 const brandingSchema = z.object({
+  logo_url: z.string().nullable().optional(),
   primary_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex colour'),
   secondary_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex colour'),
   accent_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex colour'),

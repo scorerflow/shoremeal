@@ -4,12 +4,13 @@ import { updateBranding as updateBrandingRepo } from '@/lib/repositories/brandin
 export async function updateTrainerBranding(
   supabase: SupabaseClient,
   userId: string,
-  colours: {
+  data: {
+    logo_url?: string | null
     primary_colour: string
     secondary_colour: string
     accent_colour: string
   }
 ) {
-  await updateBrandingRepo(supabase, userId, colours)
+  await updateBrandingRepo(supabase, userId, data)
   return { success: true }
 }

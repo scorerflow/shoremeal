@@ -32,18 +32,28 @@ export async function getBrandingColours(
 export async function updateBranding(
   db: SupabaseClient,
   trainerId: string,
-  colours: {
+  data: {
+    logo_url?: string | null
     primary_colour: string
     secondary_colour: string
     accent_colour: string
   }
 ): Promise<void> {
+  const updateData: Record<string, any> = {
+    primary_colour: data.primary_colour,
+    secondary_colour: data.secondary_colour,
+    accent_colour: data.accent_colour,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Only include logo_url if it's explicitly provided (including null to remove logo)
+  if (data.logo_url !== undefined) {
+    updateData.logo_url = data.logo_url
+  }
+
   const { error } = await db
     .from('branding')
-    .update({
-      ...colours,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('trainer_id', trainerId)
 
   if (error) throw new Error(`Failed to update branding: ${error.message}`)

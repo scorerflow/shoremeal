@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Loader2, Check, Palette } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Loader2, Check, Palette, Upload, X, Image as ImageIcon } from 'lucide-react'
 
 interface BrandingFormProps {
   initialBranding: {
@@ -22,6 +22,44 @@ export default function BrandingForm({ initialBranding, devMode }: BrandingFormP
     secondaryColour: initialBranding.secondaryColour,
     accentColour: initialBranding.accentColour,
   })
+  const [logoUrl, setLogoUrl] = useState<string | null>(initialBranding.logoUrl)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Logo file must be less than 2MB')
+      return
+    }
+
+    setLogoFile(file)
+    setError(null)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setLogoUrl(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null)
+    setLogoFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleSave = async () => {
     if (devMode) {
@@ -38,6 +76,7 @@ export default function BrandingForm({ initialBranding, devMode }: BrandingFormP
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          logo_url: logoUrl,
           primary_colour: colours.primaryColour,
           secondary_colour: colours.secondaryColour,
           accent_colour: colours.accentColour,
@@ -73,7 +112,69 @@ export default function BrandingForm({ initialBranding, devMode }: BrandingFormP
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Logo Upload Section */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Logo
+          </label>
+          <div className="flex items-start gap-4">
+            {/* Logo Preview */}
+            <div className="flex-shrink-0">
+              {logoUrl ? (
+                <div className="relative w-32 h-32 border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <img
+                    src={logoUrl}
+                    alt="Logo preview"
+                    className="w-full h-full object-contain p-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveLogo}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    title="Remove logo"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50" data-testid="logo-placeholder">
+                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Upload Button */}
+            <div className="flex-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                id="logo-upload"
+              />
+              <label
+                htmlFor="logo-upload"
+                className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {logoUrl ? 'Change Logo' : 'Upload Logo'}
+              </label>
+              <p className="text-xs text-gray-500 mt-2">
+                PNG, JPG or GIF (max 2MB). Recommended: 500x500px square logo.
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                This will appear on your branded PDF nutrition plans.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-200"></div>
+
+        {/* Color Section */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="label">Primary Colour</label>
