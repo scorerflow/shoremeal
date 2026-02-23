@@ -137,7 +137,7 @@ export default async function ClientsPage() {
                   {/* Actions */}
                   <div className="flex gap-2 flex-shrink-0">
                     <Link
-                      href={`/dashboard/clients/new?clientId=${client.id}`}
+                      href={`/dashboard/clients/${client.id}/generate-plan`}
                       className="btn-primary text-sm whitespace-nowrap"
                     >
                       New Plan

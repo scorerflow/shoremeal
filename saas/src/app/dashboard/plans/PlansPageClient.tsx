@@ -49,10 +49,10 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
             {hasSubscription ? 'Create your first nutrition plan for a client.' : 'Subscribe to start generating nutrition plans.'}
           </p>
           <Link
-            href={hasSubscription ? '/dashboard/clients/new' : '/pricing'}
+            href={hasSubscription ? '/dashboard/clients/add' : '/pricing'}
             className="btn-primary"
           >
-            {hasSubscription ? 'Create First Plan' : 'View Pricing'}
+            {hasSubscription ? 'Add First Client' : 'View Pricing'}
           </Link>
         </div>
       </div>

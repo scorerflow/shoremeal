@@ -26,9 +26,9 @@ export default async function DashboardPage() {
         subtitle={`Welcome back${trainer?.full_name ? `, ${trainer.full_name.split(' ')[0]}` : ''}!`}
         action={
           hasSubscription ? (
-            <Link href="/dashboard/clients/new" className="btn-primary flex items-center">
+            <Link href="/dashboard/clients/add" className="btn-primary flex items-center">
               <Plus className="h-5 w-5 mr-2" />
-              New Plan
+              Add Client
             </Link>
           ) : (
             <Link href="/pricing" className="btn-accent flex items-center">
@@ -80,11 +80,11 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="space-y-3">
             <Link
-              href="/dashboard/clients/new"
+              href="/dashboard/clients/add"
               className={`block p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors ${!hasSubscription ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <p className="font-medium text-gray-900">Add Client</p>
-              <p className="text-sm text-gray-600">Create a client profile and generate their first plan</p>
+              <p className="text-sm text-gray-600">Create a client profile to manage their nutrition plans</p>
             </Link>
             <Link
               href="/dashboard/clients"
