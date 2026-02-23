@@ -62,9 +62,9 @@ describe('PlansPageClient', () => {
 
       expect(screen.getByText('No plans yet')).toBeInTheDocument()
       expect(screen.getByText('Create your first nutrition plan for a client.')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Create First Plan' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Add First Client' })).toHaveAttribute(
         'href',
-        '/dashboard/clients/new'
+        '/dashboard/clients/add'
       )
     })
 

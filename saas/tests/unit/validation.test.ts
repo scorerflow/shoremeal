@@ -9,12 +9,48 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { generatePlanSchema } from '@/lib/validation'
+import { generatePlanSchema, createClientSchema } from '@/lib/validation'
 
 describe('Generate Plan Validation', () => {
+  /**
+   * Plan generation now ONLY requires a clientId.
+   * All other data is fetched from the client record (single source of truth).
+   */
+  describe('Valid inputs', () => {
+    it('should accept valid clientId', () => {
+      const result = generatePlanSchema.safeParse({
+        clientId: '123e4567-e89b-12d3-a456-426614174000',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('should reject missing clientId', () => {
+      const result = generatePlanSchema.safeParse({})
+      expect(result.success).toBe(false)
+    })
+
+    it('should reject invalid UUID format', () => {
+      const result = generatePlanSchema.safeParse({
+        clientId: 'not-a-uuid',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('should reject non-UUID string', () => {
+      const result = generatePlanSchema.safeParse({
+        clientId: '12345',
+      })
+      expect(result.success).toBe(false)
+    })
+  })
+})
+
+describe('Create Client Validation', () => {
   // Valid baseline data
   const validData = {
     name: 'Test Client',
+    email: 'test@example.com',
+    phone: '+44 7700 900000',
     age: 30,
     gender: 'M' as const,
     height: 175,
@@ -36,12 +72,12 @@ describe('Generate Plan Validation', () => {
 
   describe('Valid inputs', () => {
     it('should accept valid data', () => {
-      const result = generatePlanSchema.safeParse(validData)
+      const result = createClientSchema.safeParse(validData)
       expect(result.success).toBe(true)
     })
 
     it('should coerce string numbers to integers', () => {
-      const result = generatePlanSchema.safeParse({
+      const result = createClientSchema.safeParse({
         ...validData,
         age: '28',
         height: '170',
@@ -59,212 +95,210 @@ describe('Generate Plan Validation', () => {
       }
     })
 
-    it('should accept optional clientId as UUID', () => {
-      const result = generatePlanSchema.safeParse({
-        ...validData,
-        clientId: '123e4567-e89b-12d3-a456-426614174000',
-      })
+    it('should accept optional email and phone', () => {
+      const { email, phone, ...dataWithoutContact } = validData
+      const result = createClientSchema.safeParse(dataWithoutContact)
       expect(result.success).toBe(true)
     })
   })
 
   describe('Age validation', () => {
     it('should reject age below 16', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, age: 15 })
+      const result = createClientSchema.safeParse({ ...validData, age: 15 })
       expect(result.success).toBe(false)
     })
 
     it('should reject age above 100', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, age: 101 })
+      const result = createClientSchema.safeParse({ ...validData, age: 101 })
       expect(result.success).toBe(false)
     })
 
     it('should accept age at boundary (16)', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, age: 16 })
+      const result = createClientSchema.safeParse({ ...validData, age: 16 })
       expect(result.success).toBe(true)
     })
 
     it('should accept age at boundary (100)', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, age: 100 })
+      const result = createClientSchema.safeParse({ ...validData, age: 100 })
       expect(result.success).toBe(true)
     })
 
     it('should reject non-integer age', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, age: 25.5 })
+      const result = createClientSchema.safeParse({ ...validData, age: 25.5 })
       expect(result.success).toBe(false)
     })
   })
 
   describe('Height validation (cm)', () => {
     it('should reject height below 140cm', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, height: 139 })
+      const result = createClientSchema.safeParse({ ...validData, height: 139 })
       expect(result.success).toBe(false)
     })
 
     it('should reject height above 220cm', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, height: 221 })
+      const result = createClientSchema.safeParse({ ...validData, height: 221 })
       expect(result.success).toBe(false)
     })
 
     it('should accept height at boundary (140cm)', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, height: 140 })
+      const result = createClientSchema.safeParse({ ...validData, height: 140 })
       expect(result.success).toBe(true)
     })
 
     it('should accept height at boundary (220cm)', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, height: 220 })
+      const result = createClientSchema.safeParse({ ...validData, height: 220 })
       expect(result.success).toBe(true)
     })
   })
 
   describe('Weight validation (kg)', () => {
     it('should reject weight below 40kg', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, weight: 39 })
+      const result = createClientSchema.safeParse({ ...validData, weight: 39 })
       expect(result.success).toBe(false)
     })
 
     it('should reject weight above 200kg', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, weight: 201 })
+      const result = createClientSchema.safeParse({ ...validData, weight: 201 })
       expect(result.success).toBe(false)
     })
 
     it('should accept weight at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, weight: 40 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, weight: 200 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, weight: 40 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, weight: 200 }).success).toBe(true)
     })
   })
 
   describe('Goal weight validation (kg)', () => {
     it('should reject goal weight below 40kg', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, ideal_weight: 39 })
+      const result = createClientSchema.safeParse({ ...validData, ideal_weight: 39 })
       expect(result.success).toBe(false)
     })
 
     it('should reject goal weight above 200kg', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, ideal_weight: 201 })
+      const result = createClientSchema.safeParse({ ...validData, ideal_weight: 201 })
       expect(result.success).toBe(false)
     })
 
     it('should accept goal weight at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, ideal_weight: 40 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, ideal_weight: 200 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, ideal_weight: 40 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, ideal_weight: 200 }).success).toBe(true)
     })
   })
 
   describe('Budget validation (£)', () => {
     it('should reject budget below £10', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, budget: 9 })
+      const result = createClientSchema.safeParse({ ...validData, budget: 9 })
       expect(result.success).toBe(false)
     })
 
     it('should reject budget above £1000', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, budget: 1001 })
+      const result = createClientSchema.safeParse({ ...validData, budget: 1001 })
       expect(result.success).toBe(false)
     })
 
     it('should accept budget at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, budget: 10 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, budget: 1000 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, budget: 10 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, budget: 1000 }).success).toBe(true)
     })
 
     it('should reject non-integer budget', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, budget: 75.50 })
+      const result = createClientSchema.safeParse({ ...validData, budget: 75.50 })
       expect(result.success).toBe(false)
     })
   })
 
   describe('Meals per day validation', () => {
     it('should reject less than 2 meals', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, meals_per_day: 1 })
+      const result = createClientSchema.safeParse({ ...validData, meals_per_day: 1 })
       expect(result.success).toBe(false)
     })
 
     it('should reject more than 6 meals', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, meals_per_day: 7 })
+      const result = createClientSchema.safeParse({ ...validData, meals_per_day: 7 })
       expect(result.success).toBe(false)
     })
 
     it('should accept meals at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, meals_per_day: 2 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, meals_per_day: 6 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, meals_per_day: 2 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, meals_per_day: 6 }).success).toBe(true)
     })
   })
 
   describe('Plan duration validation (days)', () => {
     it('should reject less than 3 days', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, plan_duration: 2 })
+      const result = createClientSchema.safeParse({ ...validData, plan_duration: 2 })
       expect(result.success).toBe(false)
     })
 
     it('should reject more than 30 days', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, plan_duration: 31 })
+      const result = createClientSchema.safeParse({ ...validData, plan_duration: 31 })
       expect(result.success).toBe(false)
     })
 
     it('should accept duration at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, plan_duration: 3 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, plan_duration: 30 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, plan_duration: 3 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, plan_duration: 30 }).success).toBe(true)
     })
   })
 
   describe('Prep time validation', () => {
     it('should reject less than 10 minutes', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, prep_time: 9 })
+      const result = createClientSchema.safeParse({ ...validData, prep_time: 9 })
       expect(result.success).toBe(false)
     })
 
     it('should reject more than 120 minutes', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, prep_time: 121 })
+      const result = createClientSchema.safeParse({ ...validData, prep_time: 121 })
       expect(result.success).toBe(false)
     })
 
     it('should accept prep time at boundaries', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, prep_time: 10 }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, prep_time: 120 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, prep_time: 10 }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, prep_time: 120 }).success).toBe(true)
     })
   })
 
   describe('Enum validation', () => {
     it('should reject invalid gender', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, gender: 'X' })
+      const result = createClientSchema.safeParse({ ...validData, gender: 'X' })
       expect(result.success).toBe(false)
     })
 
     it('should reject invalid activity level', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, activity_level: 'super_active' })
+      const result = createClientSchema.safeParse({ ...validData, activity_level: 'super_active' })
       expect(result.success).toBe(false)
     })
 
     it('should reject invalid goal', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, goal: 'get_shredded' })
+      const result = createClientSchema.safeParse({ ...validData, goal: 'get_shredded' })
       expect(result.success).toBe(false)
     })
 
     it('should reject invalid dietary type', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, dietary_type: 'carnivore' })
+      const result = createClientSchema.safeParse({ ...validData, dietary_type: 'carnivore' })
       expect(result.success).toBe(false)
     })
 
     it('should reject invalid cooking skill', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, cooking_skill: 'expert' })
+      const result = createClientSchema.safeParse({ ...validData, cooking_skill: 'expert' })
       expect(result.success).toBe(false)
     })
 
     it('should reject invalid meal variety', () => {
-      const result = generatePlanSchema.safeParse({ ...validData, meal_prep_style: 'weekly' })
+      const result = createClientSchema.safeParse({ ...validData, meal_prep_style: 'weekly' })
       expect(result.success).toBe(false)
     })
 
     it('should accept all valid meal variety options', () => {
-      expect(generatePlanSchema.safeParse({ ...validData, meal_prep_style: 'daily' }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, meal_prep_style: 'batch' }).success).toBe(true)
-      expect(generatePlanSchema.safeParse({ ...validData, meal_prep_style: 'mixed' }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, meal_prep_style: 'daily' }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, meal_prep_style: 'batch' }).success).toBe(true)
+      expect(createClientSchema.safeParse({ ...validData, meal_prep_style: 'mixed' }).success).toBe(true)
     })
   })
 
   describe('Text field sanitization', () => {
     it('should strip HTML from name', () => {
-      const result = generatePlanSchema.safeParse({
+      const result = createClientSchema.safeParse({
         ...validData,
         name: '<script>alert("xss")</script>John Doe',
       })
@@ -276,7 +310,7 @@ describe('Generate Plan Validation', () => {
     })
 
     it('should strip script tags from allergies', () => {
-      const result = generatePlanSchema.safeParse({
+      const result = createClientSchema.safeParse({
         ...validData,
         allergies: 'Nuts <script>malicious()</script>',
       })
@@ -288,7 +322,7 @@ describe('Generate Plan Validation', () => {
 
     it('should limit text field length', () => {
       const longText = 'a'.repeat(600)
-      const result = generatePlanSchema.safeParse({
+      const result = createClientSchema.safeParse({
         ...validData,
         allergies: longText,
       })
@@ -299,12 +333,12 @@ describe('Generate Plan Validation', () => {
   describe('Required fields', () => {
     it('should reject missing name', () => {
       const { name, ...dataWithoutName } = validData
-      const result = generatePlanSchema.safeParse(dataWithoutName)
+      const result = createClientSchema.safeParse(dataWithoutName)
       expect(result.success).toBe(false)
     })
 
     it('should allow empty optional fields', () => {
-      const result = generatePlanSchema.safeParse({
+      const result = createClientSchema.safeParse({
         ...validData,
         allergies: '',
         dislikes: '',

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getTrainerById } from '@/lib/repositories/trainers'
-import { createClient as createClientRecord, getClientById } from '@/lib/repositories/clients'
+import { getClientById } from '@/lib/repositories/clients'
 import { createPlan, getPlanWithClient, updatePlanStatus } from '@/lib/repositories/plans'
 import { getBrandingColours } from '@/lib/repositories/branding'
 import { inngest } from '@/lib/inngest/client'
@@ -45,37 +45,22 @@ export async function requestPlanGeneration(
     businessName = trainer.business_name || undefined
   }
 
-  let client
-  let clientId: string
-  let planFormData: Record<string, unknown>
-
   // In DEV_MODE, use service client to bypass RLS (no real auth session)
   const clientDb = DEV_MODE ? await createServiceClient() : supabase
 
-  // If clientId is provided, use the existing client; otherwise create a new one
-  if (formData.clientId) {
-    const existingClient = await getClientById(clientDb, formData.clientId)
+  // Fetch existing client (formData.clientId is now required by schema)
+  const client = await getClientById(clientDb, formData.clientId)
 
-    if (!existingClient || existingClient.trainer_id !== userId) {
-      throw new AppError('Client not found', 'FORBIDDEN', 404)
-    }
+  if (!client || client.trainer_id !== userId) {
+    throw new AppError('Client not found', 'FORBIDDEN', 404)
+  }
 
-    client = existingClient
-    clientId = existingClient.id
-    // Use client's stored data as single source of truth
-    planFormData = {
-      ...existingClient.form_data,
-      name: existingClient.name,
-    }
-  } else {
-    client = await createClientRecord(clientDb, {
-      trainer_id: userId,
-      name: formData.name,
-      form_data: formData as unknown as Record<string, unknown>,
-    })
-    clientId = client.id
-    // Use form data as provided
-    planFormData = formData as unknown as Record<string, unknown>
+  const clientId = client.id
+
+  // Use client's stored data as single source of truth
+  const planFormData: Record<string, unknown> = {
+    ...client.form_data,
+    name: client.name,
   }
 
   // Service client for plan creation (bypasses RLS for nullable fields)
@@ -102,7 +87,7 @@ export async function requestPlanGeneration(
     action: 'plan.generation_started',
     resourceType: 'plan',
     resourceId: plan.id,
-    metadata: { clientId: clientId, tier, reusingExisting: !!formData.clientId },
+    metadata: { clientId: clientId, tier },
     ipAddress: ip,
   })
 
