@@ -1,10 +1,11 @@
 /**
- * Unit tests for client repository methods
+ * Unit tests for clients repository (MOCKED - no real database calls)
+ *
+ * These tests verify repository logic in isolation by mocking the Supabase client.
+ * Integration tests verify actual database behavior.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { createAuthenticatedUser, deleteUser } from '../../helpers/auth'
-import { createServiceClient } from '../../helpers/db'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   createClient,
   getClientById,
@@ -13,30 +14,42 @@ import {
   getClientPlans,
   updateClientLastPlanDate,
 } from '@/lib/repositories/clients'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-describe('Client Repository', () => {
-  let userId: string
-  let supabase: ReturnType<typeof createServiceClient>
-  let clientId: string
+describe('Clients Repository (Unit - Mocked)', () => {
+  let mockSupabase: SupabaseClient
 
-  beforeAll(async () => {
-    const user = await createAuthenticatedUser()
-    userId = user.userId
-    supabase = createServiceClient()
-  })
-
-  afterAll(async () => {
-    // Cleanup test client
-    if (clientId) {
-      await supabase.from('clients').delete().eq('id', clientId)
-    }
-    await deleteUser(userId)
+  beforeEach(() => {
+    // Mock Supabase client
+    mockSupabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(),
+            order: vi.fn(),
+          })),
+          order: vi.fn(),
+        })),
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(),
+        })),
+        delete: vi.fn(() => ({
+          eq: vi.fn(),
+        })),
+      })),
+    } as any
   })
 
   describe('createClient', () => {
     it('should create a client with all fields', async () => {
-      const clientData = {
-        trainer_id: userId,
+      const mockClient = {
+        id: 'client-123',
+        trainer_id: 'user-123',
         name: 'Test Client',
         email: 'test@example.com',
         phone: '+44 7700 900000',
@@ -59,24 +72,36 @@ describe('Client Repository', () => {
           plan_duration: 7,
           meal_prep_style: 'batch',
         },
+        created_at: '2024-01-01T00:00:00Z',
+        last_plan_date: null,
       }
 
-      const client = await createClient(supabase, clientData)
+      const singleMock = vi.fn().mockResolvedValue({ data: mockClient, error: null })
+      const selectMock = vi.fn(() => ({ single: singleMock }))
+      const insertMock = vi.fn(() => ({ select: selectMock }))
+      mockSupabase.from = vi.fn(() => ({ insert: insertMock })) as any
 
-      expect(client).toBeDefined()
-      expect(client.id).toBeDefined()
-      expect(client.name).toBe('Test Client')
-      expect(client.email).toBe('test@example.com')
-      expect(client.phone).toBe('+44 7700 900000')
-      expect(client.trainer_id).toBe(userId)
+      const clientData = {
+        trainer_id: 'user-123',
+        name: 'Test Client',
+        email: 'test@example.com',
+        phone: '+44 7700 900000',
+        form_data: mockClient.form_data,
+      }
 
-      clientId = client.id // Save for later tests
+      const result = await createClient(mockSupabase, clientData)
+
+      expect(insertMock).toHaveBeenCalledWith(clientData)
+      expect(result).toEqual(mockClient)
     })
 
     it('should create client without optional email/phone', async () => {
-      const clientData = {
-        trainer_id: userId,
+      const mockClient = {
+        id: 'client-456',
+        trainer_id: 'user-123',
         name: 'Minimal Client',
+        email: null,
+        phone: null,
         form_data: {
           age: 25,
           gender: 'F',
@@ -96,174 +121,388 @@ describe('Client Repository', () => {
           plan_duration: 7,
           meal_prep_style: 'daily',
         },
+        created_at: '2024-01-01T00:00:00Z',
+        last_plan_date: null,
       }
 
-      const client = await createClient(supabase, clientData)
+      const singleMock = vi.fn().mockResolvedValue({ data: mockClient, error: null })
+      mockSupabase.from = vi.fn(() => ({
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
 
-      expect(client.email).toBeNull()
-      expect(client.phone).toBeNull()
+      const result = await createClient(mockSupabase, {
+        trainer_id: 'user-123',
+        name: 'Minimal Client',
+        form_data: mockClient.form_data,
+      })
 
-      // Cleanup
-      await supabase.from('clients').delete().eq('id', client.id)
+      expect(result.email).toBeNull()
+      expect(result.phone).toBeNull()
+    })
+
+    it('should throw error when insert fails', async () => {
+      const singleMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      })
+      mockSupabase.from = vi.fn(() => ({
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
+
+      await expect(
+        createClient(mockSupabase, {
+          trainer_id: 'user-123',
+          name: 'Test',
+          form_data: {} as any,
+        })
+      ).rejects.toThrow('Failed to create client: Database error')
     })
   })
 
   describe('getClientById', () => {
     it('should retrieve client by ID', async () => {
-      const client = await getClientById(supabase, clientId)
+      const mockClient = {
+        id: 'client-123',
+        trainer_id: 'user-123',
+        name: 'Test Client',
+        email: 'test@example.com',
+        phone: '+44 7700 900000',
+        form_data: {},
+        created_at: '2024-01-01T00:00:00Z',
+        last_plan_date: null,
+      }
 
-      expect(client).toBeDefined()
-      expect(client?.id).toBe(clientId)
-      expect(client?.name).toBe('Test Client')
-      expect(client?.email).toBe('test@example.com')
-      expect(client?.phone).toBe('+44 7700 900000')
+      const singleMock = vi.fn().mockResolvedValue({ data: mockClient, error: null })
+      const eqMock = vi.fn(() => ({ single: singleMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      const result = await getClientById(mockSupabase, 'client-123')
+
+      expect(selectMock).toHaveBeenCalledWith('*')
+      expect(eqMock).toHaveBeenCalledWith('id', 'client-123')
+      expect(result).toEqual(mockClient)
     })
 
     it('should return null for non-existent client', async () => {
-      const fakeId = '00000000-0000-0000-0000-000000000000'
-      const client = await getClientById(supabase, fakeId)
+      const singleMock = vi.fn().mockResolvedValue({ data: null, error: null })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
 
-      expect(client).toBeNull()
+      const result = await getClientById(mockSupabase, 'fake-id')
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null on error', async () => {
+      const singleMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'Not found' },
+      })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
+
+      const result = await getClientById(mockSupabase, 'fake-id')
+
+      expect(result).toBeNull()
     })
   })
 
   describe('getClientsByTrainer', () => {
     it('should retrieve all clients for trainer', async () => {
-      const clients = await getClientsByTrainer(supabase, userId)
+      // Mock data with nested plans structure (from Supabase join)
+      const mockClients = [
+        {
+          id: 'client-1',
+          name: 'Client A',
+          email: 'a@example.com',
+          phone: null,
+          last_plan_date: null,
+          created_at: '2024-01-01T00:00:00Z',
+          plans: [],
+        },
+        {
+          id: 'client-2',
+          name: 'Client B',
+          email: 'b@example.com',
+          phone: '+44 123',
+          last_plan_date: '2024-01-05T00:00:00Z',
+          created_at: '2024-01-02T00:00:00Z',
+          plans: [{ id: 'plan-1', status: 'completed', created_at: '2024-01-05T00:00:00Z' }],
+        },
+      ]
 
-      expect(Array.isArray(clients)).toBe(true)
-      expect(clients.length).toBeGreaterThan(0)
+      const orderMock = vi.fn().mockResolvedValue({ data: mockClients, error: null })
+      const eqMock = vi.fn(() => ({ order: orderMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
 
-      const testClient = clients.find((c) => c.id === clientId)
-      expect(testClient).toBeDefined()
-      expect(testClient?.name).toBe('Test Client')
+      const result = await getClientsByTrainer(mockSupabase, 'user-123')
+
+      expect(selectMock).toHaveBeenCalledWith(
+        'id, name, email, phone, last_plan_date, created_at, plans(id, status, created_at)'
+      )
+      expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
+      expect(orderMock).toHaveBeenCalledWith('last_plan_date', { ascending: false, nullsFirst: false })
+      expect(result).toEqual(mockClients)
     })
 
-    it('should sort clients by name', async () => {
-      const clients = await getClientsByTrainer(supabase, userId, {
+    it('should sort clients by name ascending', async () => {
+      const mockClients = [
+        { id: '1', name: 'Alice', plans: [] },
+        { id: '2', name: 'Bob', plans: [] },
+      ]
+
+      const orderMock = vi.fn().mockResolvedValue({ data: mockClients, error: null })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ order: orderMock })),
+        })),
+      })) as any
+
+      await getClientsByTrainer(mockSupabase, 'user-123', {
         sortBy: 'name',
         sortOrder: 'asc',
       })
 
-      expect(clients.length).toBeGreaterThan(0)
-
-      // Verify sorted order
-      for (let i = 1; i < clients.length; i++) {
-        expect(clients[i].name >= clients[i - 1].name).toBe(true)
-      }
+      expect(orderMock).toHaveBeenCalledWith('name', { ascending: true, nullsFirst: false })
     })
 
-    it('should sort clients by last_plan_date', async () => {
-      const clients = await getClientsByTrainer(supabase, userId, {
+    it('should sort clients by last_plan_date descending', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ order: orderMock })),
+        })),
+      })) as any
+
+      await getClientsByTrainer(mockSupabase, 'user-123', {
         sortBy: 'last_plan_date',
         sortOrder: 'desc',
       })
 
-      expect(Array.isArray(clients)).toBe(true)
+      expect(orderMock).toHaveBeenCalledWith('last_plan_date', { ascending: false, nullsFirst: false })
     })
 
-    it('should include phone and last_plan_date fields', async () => {
-      const clients = await getClientsByTrainer(supabase, userId)
+    it('should throw error on database error', async () => {
+      const orderMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'DB error' },
+      })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ order: orderMock })),
+        })),
+      })) as any
 
-      const client = clients[0]
-      expect(client).toHaveProperty('phone')
-      expect(client).toHaveProperty('last_plan_date')
+      await expect(
+        getClientsByTrainer(mockSupabase, 'user-123')
+      ).rejects.toThrow('Failed to fetch clients: DB error')
     })
   })
 
   describe('updateClient', () => {
     it('should update client profile fields', async () => {
-      const updates = {
+      const mockUpdated = {
+        id: 'client-123',
+        trainer_id: 'user-123',
         name: 'Updated Name',
         email: 'updated@example.com',
-        phone: '+44 7700 900001',
+        phone: '+44 999',
+        form_data: {},
+        created_at: '2024-01-01T00:00:00Z',
+        last_plan_date: null,
       }
 
-      const updated = await updateClient(supabase, clientId, userId, updates)
+      const singleMock = vi.fn().mockResolvedValue({ data: mockUpdated, error: null })
+      const eqMock = vi.fn(() => ({
+        select: vi.fn(() => ({ single: singleMock })),
+      }))
+      const eq2Mock = vi.fn(() => ({ eq: eqMock }))
+      const updateMock = vi.fn(() => ({ eq: eq2Mock }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
 
-      expect(updated.name).toBe('Updated Name')
-      expect(updated.email).toBe('updated@example.com')
-      expect(updated.phone).toBe('+44 7700 900001')
+      const result = await updateClient(mockSupabase, 'client-123', 'user-123', {
+        name: 'Updated Name',
+        email: 'updated@example.com',
+        phone: '+44 999',
+      })
+
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Updated Name',
+          email: 'updated@example.com',
+          phone: '+44 999',
+        })
+      )
+      expect(eq2Mock).toHaveBeenCalledWith('id', 'client-123')
+      expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
+      expect(result).toEqual(mockUpdated)
     })
 
     it('should update form_data fields', async () => {
-      const updates = {
-        form_data: {
-          age: 31,
-          gender: 'M',
-          height: 180,
-          weight: 78, // Updated
-          ideal_weight: 73, // Updated
-          activity_level: 'very_active', // Updated
-          goal: 'muscle_gain', // Updated
-          dietary_type: 'omnivore',
-          allergies: '',
-          dislikes: '',
-          preferences: '',
-          budget: 80, // Updated
-          cooking_skill: 'advanced', // Updated
-          prep_time: 45, // Updated
-          meals_per_day: 4, // Updated
-          plan_duration: 14, // Updated
-          meal_prep_style: 'mixed', // Updated
-        },
+      const updatedFormData = {
+        age: 31,
+        weight: 78,
+        activity_level: 'very_active',
       }
 
-      const updated = await updateClient(supabase, clientId, userId, updates)
-      expect(updated).toBeDefined()
+      const mockUpdated = {
+        id: 'client-123',
+        form_data: updatedFormData,
+      }
 
-      // Verify updates persisted
-      const client = await getClientById(supabase, clientId)
-      expect(client?.form_data.weight).toBe(78)
-      expect(client?.form_data.activity_level).toBe('very_active')
+      const singleMock = vi.fn().mockResolvedValue({ data: mockUpdated, error: null })
+      mockSupabase.from = vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({ single: singleMock })),
+            })),
+          })),
+        })),
+      })) as any
+
+      const result = await updateClient(mockSupabase, 'client-123', 'user-123', {
+        form_data: updatedFormData as any,
+      })
+
+      expect(result.form_data).toEqual(updatedFormData)
+    })
+
+    it('should throw error when update fails', async () => {
+      const singleMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'Update failed' },
+      })
+      mockSupabase.from = vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({ single: singleMock })),
+            })),
+          })),
+        })),
+      })) as any
+
+      await expect(
+        updateClient(mockSupabase, 'client-123', 'user-123', { name: 'Test' })
+      ).rejects.toThrow('Failed to update client: Update failed')
     })
   })
 
   describe('getClientPlans', () => {
     it('should return empty array for client with no plans', async () => {
-      const plans = await getClientPlans(supabase, clientId, userId)
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null })
+      const eq2Mock = vi.fn(() => ({ order: orderMock }))
+      const eq1Mock = vi.fn(() => ({ eq: eq2Mock }))
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: eq1Mock,
+        })),
+      })) as any
 
-      expect(Array.isArray(plans)).toBe(true)
-      expect(plans.length).toBe(0)
+      const result = await getClientPlans(mockSupabase, 'client-123', 'user-123')
+
+      expect(eq1Mock).toHaveBeenCalledWith('client_id', 'client-123')
+      expect(eq2Mock).toHaveBeenCalledWith('trainer_id', 'user-123')
+      expect(result).toEqual([])
+    })
+
+    it('should return plans for client', async () => {
+      const mockPlans = [
+        {
+          id: 'plan-1',
+          status: 'completed',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T01:00:00Z',
+        },
+        {
+          id: 'plan-2',
+          status: 'pending',
+          created_at: '2024-01-02T00:00:00Z',
+          updated_at: '2024-01-02T01:00:00Z',
+        },
+      ]
+
+      const orderMock = vi.fn().mockResolvedValue({ data: mockPlans, error: null })
+      const eq2Mock = vi.fn(() => ({ order: orderMock }))
+      const eq1Mock = vi.fn(() => ({ eq: eq2Mock }))
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: eq1Mock,
+        })),
+      })) as any
+
+      const result = await getClientPlans(mockSupabase, 'client-123', 'user-123')
+
+      expect(result).toEqual(mockPlans)
+      expect(orderMock).toHaveBeenCalledWith('created_at', { ascending: false })
+    })
+
+    it('should throw error on database error', async () => {
+      const orderMock = vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: 'DB error' },
+      })
+      const eq2Mock = vi.fn(() => ({ order: orderMock }))
+      const eq1Mock = vi.fn(() => ({ eq: eq2Mock }))
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: eq1Mock,
+        })),
+      })) as any
+
+      await expect(
+        getClientPlans(mockSupabase, 'client-123', 'user-123')
+      ).rejects.toThrow('Failed to fetch client plans: DB error')
     })
   })
 
   describe('updateClientLastPlanDate', () => {
     it('should update last_plan_date field', async () => {
-      const beforeUpdate = await getClientById(supabase, clientId)
-      expect(beforeUpdate?.last_plan_date).toBeNull()
+      const eqMock = vi.fn().mockResolvedValue({ error: null })
+      const updateMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
 
-      await updateClientLastPlanDate(supabase, clientId)
+      await updateClientLastPlanDate(mockSupabase, 'client-123')
 
-      const afterUpdate = await getClientById(supabase, clientId)
-      expect(afterUpdate?.last_plan_date).not.toBeNull()
-      expect(new Date(afterUpdate!.last_plan_date!).getTime()).toBeGreaterThan(0)
+      expect(updateMock).toHaveBeenCalledWith({
+        last_plan_date: expect.any(String),
+        updated_at: expect.any(String),
+      })
+      expect(eqMock).toHaveBeenCalledWith('id', 'client-123')
     })
 
-    it('should not throw on non-existent client', async () => {
-      const fakeId = '00000000-0000-0000-0000-000000000000'
+    it('should not throw on error', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      // Should not throw
+      const eqMock = vi.fn().mockResolvedValue({ error: { message: 'Not found' } })
+      mockSupabase.from = vi.fn(() => ({
+        update: vi.fn(() => ({ eq: eqMock })),
+      })) as any
+
+      // Should not throw (just logs error)
       await expect(
-        updateClientLastPlanDate(supabase, fakeId)
+        updateClientLastPlanDate(mockSupabase, 'fake-id')
       ).resolves.not.toThrow()
-    })
-  })
 
-  describe('RLS Enforcement', () => {
-    it('should respect trainer_id when fetching clients', async () => {
-      // Create another user
-      const otherUser = await createAuthenticatedUser()
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to update client last_plan_date:',
+        { message: 'Not found' }
+      )
 
-      // Try to get first user's clients with second user's ID
-      const clients = await getClientsByTrainer(supabase, otherUser.userId)
-
-      // Should not include first user's client
-      const hasFirstUserClient = clients.some((c) => c.id === clientId)
-      expect(hasFirstUserClient).toBe(false)
-
-      // Cleanup
-      await deleteUser(otherUser.userId)
+      consoleErrorSpy.mockRestore()
     })
   })
 })

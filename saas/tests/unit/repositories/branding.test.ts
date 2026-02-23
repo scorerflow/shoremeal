@@ -1,220 +1,187 @@
-// @vitest-environment node
 /**
- * Unit tests for branding repository
+ * Unit tests for branding repository (MOCKED - no real database calls)
  *
- * Tests updateBranding function with logo_url handling.
+ * These tests verify repository logic in isolation by mocking the Supabase client.
+ * Integration tests verify actual database behavior.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createTestUser, deleteTestUser } from '../../helpers/auth'
-import { createTestServiceClient } from '../../helpers/db'
-import type { TestUser } from '../../helpers/auth'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { updateBranding, getBrandingByTrainer } from '@/lib/repositories/branding'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-describe('Branding Repository - Logo Updates', () => {
-  let user: TestUser
-  const supabase = createTestServiceClient()
+describe('Branding Repository (Unit - Mocked)', () => {
+  let mockSupabase: SupabaseClient
 
-  beforeEach(async () => {
-    user = await createTestUser()
-
-    // Initialize branding record
-    await supabase.from('branding').upsert({
-      trainer_id: user.user.id,
-      logo_url: null,
-      primary_colour: '#2C5F2D',
-      secondary_colour: '#4A7C4E',
-      accent_colour: '#FF8C00',
-    })
+  beforeEach(() => {
+    // Mock Supabase client
+    mockSupabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(),
+        })),
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(),
+          })),
+        })),
+      })),
+    } as any
   })
 
-  afterEach(async () => {
-    await deleteTestUser(user.user.id)
-  })
+  describe('updateBranding', () => {
+    it('should include logo_url in update when provided', async () => {
+      const updateMock = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
 
-  describe('updateBranding - Logo Field', () => {
-    it('should update logo_url when provided', async () => {
-      await updateBranding(supabase, user.user.id, {
+      await updateBranding(mockSupabase, 'user-123', {
         logo_url: 'data:image/png;base64,test',
-        primary_colour: '#2C5F2D',
-        secondary_colour: '#4A7C4E',
-        accent_colour: '#FF8C00',
-      })
-
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe('data:image/png;base64,test')
-    })
-
-    it('should set logo_url to null when explicitly passed null', async () => {
-      // Set initial logo
-      await supabase
-        .from('branding')
-        .update({ logo_url: 'data:image/png;base64,existing' })
-        .eq('trainer_id', user.user.id)
-
-      // Remove logo
-      await updateBranding(supabase, user.user.id, {
-        logo_url: null,
-        primary_colour: '#2C5F2D',
-        secondary_colour: '#4A7C4E',
-        accent_colour: '#FF8C00',
-      })
-
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBeNull()
-    })
-
-    it('should preserve existing logo_url when not provided', async () => {
-      // Set initial logo
-      await supabase
-        .from('branding')
-        .update({ logo_url: 'data:image/png;base64,existing' })
-        .eq('trainer_id', user.user.id)
-
-      // Update colors only (no logo_url in data)
-      await updateBranding(supabase, user.user.id, {
         primary_colour: '#FF0000',
         secondary_colour: '#00FF00',
         accent_colour: '#0000FF',
       })
 
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe('data:image/png;base64,existing')
-      expect(branding?.primary_colour).toBe('#FF0000')
-    })
-
-    it('should update logo and colors together', async () => {
-      await updateBranding(supabase, user.user.id, {
-        logo_url: 'data:image/png;base64,newlogo',
-        primary_colour: '#AABBCC',
-        secondary_colour: '#DDEEFF',
-        accent_colour: '#112233',
-      })
-
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding).toMatchObject({
-        logo_url: 'data:image/png;base64,newlogo',
-        primary_colour: '#AABBCC',
-        secondary_colour: '#DDEEFF',
-        accent_colour: '#112233',
-      })
-    })
-  })
-
-  describe('updateBranding - Colors Only', () => {
-    it('should update all three colors', async () => {
-      await updateBranding(supabase, user.user.id, {
-        primary_colour: '#FF0000',
-        secondary_colour: '#00FF00',
-        accent_colour: '#0000FF',
-      })
-
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding).toMatchObject({
-        primary_colour: '#FF0000',
-        secondary_colour: '#00FF00',
-        accent_colour: '#0000FF',
-      })
-    })
-
-    it('should update updated_at timestamp', async () => {
-      const before = await getBrandingByTrainer(supabase, user.user.id)
-
-      // Wait to ensure timestamp difference
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      await updateBranding(supabase, user.user.id, {
-        primary_colour: '#FF0000',
-        secondary_colour: '#00FF00',
-        accent_colour: '#0000FF',
-      })
-
-      const after = await getBrandingByTrainer(supabase, user.user.id)
-
-      expect(new Date(after!.updated_at).getTime()).toBeGreaterThan(new Date(before!.updated_at).getTime())
-    })
-  })
-
-  describe('Error Handling', () => {
-    it('should silently succeed when updating non-existent trainer (Supabase behavior)', async () => {
-      // Note: Supabase update() doesn't throw error for non-existent rows, just updates 0 rows
-      // In production, branding records are created on trainer signup, so this won't happen
-      await expect(
-        updateBranding(supabase, '00000000-0000-0000-0000-000000000000', {
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logo_url: 'data:image/png;base64,test',
           primary_colour: '#FF0000',
           secondary_colour: '#00FF00',
           accent_colour: '#0000FF',
         })
-      ).resolves.toBeUndefined()
-    })
-  })
-
-  describe('Logo Data Integrity', () => {
-    it('should handle long base64 strings', async () => {
-      // Create a realistic-sized base64 string (simulate ~50KB image)
-      const longBase64 = 'data:image/png;base64,' + 'A'.repeat(70000)
-
-      await updateBranding(supabase, user.user.id, {
-        logo_url: longBase64,
-        primary_colour: '#2C5F2D',
-        secondary_colour: '#4A7C4E',
-        accent_colour: '#FF8C00',
-      })
-
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe(longBase64)
-      expect(branding?.logo_url?.length).toBe(longBase64.length)
+      )
     })
 
-    it('should handle empty string as logo_url', async () => {
-      await updateBranding(supabase, user.user.id, {
-        logo_url: '',
-        primary_colour: '#2C5F2D',
-        secondary_colour: '#4A7C4E',
-        accent_colour: '#FF8C00',
-      })
+    it('should include logo_url when explicitly set to null', async () => {
+      const updateMock = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
 
-      const branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe('')
-    })
-  })
-
-  describe('Multiple Updates', () => {
-    it('should handle sequential logo updates', async () => {
-      // First update
-      await updateBranding(supabase, user.user.id, {
-        logo_url: 'data:image/png;base64,first',
+      await updateBranding(mockSupabase, 'user-123', {
+        logo_url: null,
         primary_colour: '#FF0000',
         secondary_colour: '#00FF00',
         accent_colour: '#0000FF',
       })
 
-      let branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe('data:image/png;base64,first')
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logo_url: null,
+        })
+      )
+    })
 
-      // Second update
-      await updateBranding(supabase, user.user.id, {
-        logo_url: 'data:image/png;base64,second',
-        primary_colour: '#AABBCC',
-        secondary_colour: '#DDEEFF',
-        accent_colour: '#112233',
+    it('should NOT include logo_url when undefined', async () => {
+      const updateMock = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
+
+      await updateBranding(mockSupabase, 'user-123', {
+        primary_colour: '#FF0000',
+        secondary_colour: '#00FF00',
+        accent_colour: '#0000FF',
       })
 
-      branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBe('data:image/png;base64,second')
-      expect(branding?.primary_colour).toBe('#AABBCC')
+      const updateCall = updateMock.mock.calls[0][0]
+      expect(updateCall).not.toHaveProperty('logo_url')
+      expect(updateCall).toHaveProperty('primary_colour', '#FF0000')
+    })
 
-      // Third update - remove logo
-      await updateBranding(supabase, user.user.id, {
-        logo_url: null,
-        primary_colour: '#FFFFFF',
-        secondary_colour: '#000000',
-        accent_colour: '#CCCCCC',
+    it('should always include updated_at timestamp', async () => {
+      const updateMock = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
+
+      await updateBranding(mockSupabase, 'user-123', {
+        primary_colour: '#FF0000',
+        secondary_colour: '#00FF00',
+        accent_colour: '#0000FF',
       })
 
-      branding = await getBrandingByTrainer(supabase, user.user.id)
-      expect(branding?.logo_url).toBeNull()
-      expect(branding?.primary_colour).toBe('#FFFFFF')
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updated_at: expect.any(String),
+        })
+      )
+    })
+
+    it('should filter by trainer_id', async () => {
+      const eqMock = vi.fn().mockResolvedValue({ error: null })
+      const updateMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
+
+      await updateBranding(mockSupabase, 'user-123', {
+        primary_colour: '#FF0000',
+        secondary_colour: '#00FF00',
+        accent_colour: '#0000FF',
+      })
+
+      expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
+    })
+
+    it('should throw error when update fails', async () => {
+      const updateMock = vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ error: { message: 'Database error' } }),
+      }))
+      mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
+
+      await expect(
+        updateBranding(mockSupabase, 'user-123', {
+          primary_colour: '#FF0000',
+          secondary_colour: '#00FF00',
+          accent_colour: '#0000FF',
+        })
+      ).rejects.toThrow('Failed to update branding: Database error')
+    })
+  })
+
+  describe('getBrandingByTrainer', () => {
+    it('should return branding data when found', async () => {
+      const mockBranding = {
+        id: 'brand-123',
+        trainer_id: 'user-123',
+        logo_url: 'data:image/png;base64,test',
+        primary_colour: '#FF0000',
+        secondary_colour: '#00FF00',
+        accent_colour: '#0000FF',
+      }
+
+      const singleMock = vi.fn().mockResolvedValue({ data: mockBranding, error: null })
+      const eqMock = vi.fn(() => ({ single: singleMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      const result = await getBrandingByTrainer(mockSupabase, 'user-123')
+
+      expect(selectMock).toHaveBeenCalledWith('*')
+      expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
+      expect(result).toEqual(mockBranding)
+    })
+
+    it('should return null when not found', async () => {
+      const singleMock = vi.fn().mockResolvedValue({ data: null, error: null })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
+
+      const result = await getBrandingByTrainer(mockSupabase, 'user-123')
+
+      expect(result).toBeNull()
+    })
+
+    it('should return null on error', async () => {
+      const singleMock = vi.fn().mockResolvedValue({ data: null, error: { message: 'Not found' } })
+      mockSupabase.from = vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ single: singleMock })),
+        })),
+      })) as any
+
+      const result = await getBrandingByTrainer(mockSupabase, 'user-123')
+
+      expect(result).toBeNull()
     })
   })
 })
