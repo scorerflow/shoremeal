@@ -148,7 +148,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Edit Client</h1>
-            <p className="text-gray-600">Update {formData.name}'s information and preferences.</p>
+            <p className="text-gray-600">Update {formData.name}&apos;s information and preferences.</p>
           </div>
         </div>
 
