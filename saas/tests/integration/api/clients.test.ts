@@ -1,12 +1,18 @@
 // @vitest-environment node
 /**
  * Integration tests for client management API endpoints
- * Tests: POST /api/clients, GET /api/clients, GET /api/clients/:id, PUT /api/clients/:id
+ * Tests route handlers directly without HTTP server
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createAuthenticatedUser, deleteUser } from '../../helpers/auth'
 import { createServiceClient } from '../../helpers/db'
+import { createTestRequest, getResponseJson } from '../../helpers/request'
+
+// Import route handlers
+import { GET as getClients, POST as createClient } from '@/app/api/clients/route'
+import { GET as getClient, PUT as updateClient } from '@/app/api/clients/[id]/route'
+import { GET as getClientPlans } from '@/app/api/clients/[id]/plans/route'
 
 describe('Client Management API', () => {
   let userId: string
@@ -50,18 +56,16 @@ describe('Client Management API', () => {
         meal_prep_style: 'batch',
       }
 
-      const response = await fetch('http://localhost:3001/api/clients', {
+      const request = createTestRequest('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${authToken}`,
-        },
-        body: JSON.stringify(clientData),
+        body: clientData,
+        authToken,
       })
 
+      const response = await createClient(request)
       expect(response.status).toBe(201)
 
-      const data = await response.json()
+      const data = await getResponseJson(response)
       expect(data).toHaveProperty('id')
       expect(data.name).toBe('John Doe')
       expect(data.email).toBe('john@example.com')
@@ -76,17 +80,16 @@ describe('Client Management API', () => {
         // Missing name
       }
 
-      const response = await fetch('http://localhost:3001/api/clients', {
+      const request = createTestRequest('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${authToken}`,
-        },
-        body: JSON.stringify(invalidData),
+        body: invalidData,
+        authToken,
       })
 
+      const response = await createClient(request)
       expect(response.status).toBe(400)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
       expect(data.code).toBe('VALIDATION_ERROR')
     })
 
@@ -109,17 +112,16 @@ describe('Client Management API', () => {
         meal_prep_style: 'daily',
       }
 
-      const response = await fetch('http://localhost:3001/api/clients', {
+      const request = createTestRequest('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${authToken}`,
-        },
-        body: JSON.stringify(dataWithScript),
+        body: dataWithScript,
+        authToken,
       })
 
+      const response = await createClient(request)
       expect(response.status).toBe(201)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
       // Script tags should be stripped
       expect(data.name).not.toContain('<script>')
       expect(data.name).toBe('Jane  Doe') // Script removed
@@ -128,14 +130,14 @@ describe('Client Management API', () => {
 
   describe('GET /api/clients - List Clients', () => {
     it('should return all clients for authenticated user', async () => {
-      const response = await fetch('http://localhost:3001/api/clients', {
-        headers: {
-          'Cookie': `auth-token=${authToken}`,
-        },
+      const request = createTestRequest('/api/clients', {
+        authToken,
       })
 
+      const response = await getClients(request)
       expect(response.status).toBe(200)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
       expect(Array.isArray(data)).toBe(true)
       expect(data.length).toBeGreaterThan(0)
 
@@ -151,14 +153,18 @@ describe('Client Management API', () => {
     })
 
     it('should support sorting by name', async () => {
-      const response = await fetch('http://localhost:3001/api/clients?sortBy=name&sortOrder=asc', {
-        headers: {
-          'Cookie': `auth-token=${authToken}`,
+      const request = createTestRequest('/api/clients', {
+        authToken,
+        searchParams: {
+          sortBy: 'name',
+          sortOrder: 'asc',
         },
       })
 
+      const response = await getClients(request)
       expect(response.status).toBe(200)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
 
       // Verify sorted order
       for (let i = 1; i < data.length; i++) {
@@ -167,21 +173,23 @@ describe('Client Management API', () => {
     })
 
     it('should require authentication', async () => {
-      const response = await fetch('http://localhost:3001/api/clients')
+      const request = createTestRequest('/api/clients')
+
+      const response = await getClients(request)
       expect(response.status).toBe(401)
     })
   })
 
   describe('GET /api/clients/:id - Get Client Detail', () => {
     it('should return client details for authenticated user', async () => {
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
-        headers: {
-          'Cookie': `auth-token=${authToken}`,
-        },
+      const request = createTestRequest(`/api/clients/${clientId}`, {
+        authToken,
       })
 
+      const response = await getClient(request, { params: { id: clientId } })
       expect(response.status).toBe(200)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
 
       expect(data.id).toBe(clientId)
       expect(data.name).toBe('John Doe')
@@ -196,12 +204,11 @@ describe('Client Management API', () => {
 
     it('should return 404 for non-existent client', async () => {
       const fakeId = '00000000-0000-0000-0000-000000000000'
-      const response = await fetch(`http://localhost:3001/api/clients/${fakeId}`, {
-        headers: {
-          'Cookie': `auth-token=${authToken}`,
-        },
+      const request = createTestRequest(`/api/clients/${fakeId}`, {
+        authToken,
       })
 
+      const response = await getClient(request, { params: { id: fakeId } })
       expect(response.status).toBe(404)
     })
 
@@ -210,12 +217,11 @@ describe('Client Management API', () => {
       const otherUser = await createAuthenticatedUser()
 
       // Try to access first user's client with second user's token
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
-        headers: {
-          'Cookie': `auth-token=${otherUser.accessToken}`,
-        },
+      const request = createTestRequest(`/api/clients/${clientId}`, {
+        authToken: otherUser.accessToken,
       })
 
+      const response = await getClient(request, { params: { id: clientId } })
       expect(response.status).toBe(404) // RLS should prevent access
 
       // Cleanup
@@ -233,17 +239,16 @@ describe('Client Management API', () => {
         ideal_weight: 73, // Updated goal weight
       }
 
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+      const request = createTestRequest(`/api/clients/${clientId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${authToken}`,
-        },
-        body: JSON.stringify(updates),
+        body: updates,
+        authToken,
       })
 
+      const response = await updateClient(request, { params: { id: clientId } })
       expect(response.status).toBe(200)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
 
       expect(data.name).toBe('John Smith')
       expect(data.email).toBe('john.smith@example.com')
@@ -255,17 +260,16 @@ describe('Client Management API', () => {
         age: 10, // Too young (min is 16)
       }
 
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+      const request = createTestRequest(`/api/clients/${clientId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${authToken}`,
-        },
-        body: JSON.stringify(invalidUpdates),
+        body: invalidUpdates,
+        authToken,
       })
 
+      const response = await updateClient(request, { params: { id: clientId } })
       expect(response.status).toBe(400)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
       expect(data.code).toBe('VALIDATION_ERROR')
     })
 
@@ -273,15 +277,13 @@ describe('Client Management API', () => {
       const otherUser = await createAuthenticatedUser()
 
       const updates = { name: 'Hacked Name' }
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+      const request = createTestRequest(`/api/clients/${clientId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': `auth-token=${otherUser.accessToken}`,
-        },
-        body: JSON.stringify(updates),
+        body: updates,
+        authToken: otherUser.accessToken,
       })
 
+      const response = await updateClient(request, { params: { id: clientId } })
       expect(response.status).toBe(404) // RLS should prevent access
 
       await deleteUser(otherUser.userId)
@@ -290,14 +292,14 @@ describe('Client Management API', () => {
 
   describe('GET /api/clients/:id/plans - Get Client Plans', () => {
     it('should return empty array for client with no plans', async () => {
-      const response = await fetch(`http://localhost:3001/api/clients/${clientId}/plans`, {
-        headers: {
-          'Cookie': `auth-token=${authToken}`,
-        },
+      const request = createTestRequest(`/api/clients/${clientId}/plans`, {
+        authToken,
       })
 
+      const response = await getClientPlans(request, { params: { id: clientId } })
       expect(response.status).toBe(200)
-      const data = await response.json()
+
+      const data = await getResponseJson(response)
       expect(Array.isArray(data)).toBe(true)
       expect(data.length).toBe(0) // No plans yet
     })

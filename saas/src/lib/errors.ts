@@ -51,6 +51,10 @@ export class AppError extends Error {
 }
 
 export function handleRouteError(error: unknown, context: string): NextResponse {
+  if (error instanceof ZodError) {
+    return validationError(error)
+  }
+
   if (error instanceof AppError) {
     return apiError(error.message, error.code, error.status)
   }

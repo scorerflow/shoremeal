@@ -37,6 +37,46 @@ export function withAuth(handler: AuthenticatedHandler) {
         return handler(request, { user: mockUser, supabase, ip }, routeContext?.params)
       }
 
+      // Detect test environment by checking if TEST_SUPABASE_URL is set
+      const isTestEnv = !!process.env.TEST_SUPABASE_URL
+
+      if (isTestEnv) {
+        // Test environment: extract auth token from Cookie header
+        const cookieHeader = request.headers.get('Cookie')
+        const authToken = cookieHeader
+          ?.split(';')
+          .find((c) => c.trim().startsWith('auth-token='))
+          ?.split('=')[1]
+          ?.trim()
+
+        if (!authToken) {
+          return apiError('Unauthorized', 'UNAUTHORIZED', 401)
+        }
+
+        // Create Supabase client with the auth token
+        const { createClient: createBrowserClient } = await import('@supabase/supabase-js')
+        const supabase = createBrowserClient(
+          process.env.TEST_SUPABASE_URL!,
+          process.env.TEST_SUPABASE_ANON_KEY!,
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            },
+          }
+        )
+
+        const { data: { user } } = await supabase.auth.getUser(authToken)
+
+        if (!user) {
+          return apiError('Unauthorized', 'UNAUTHORIZED', 401)
+        }
+
+        return handler(request, { user, supabase, ip }, routeContext?.params)
+      }
+
+      // Production: use Next.js cookies
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
 

@@ -38,8 +38,10 @@ CREATE TABLE clients (
     trainer_id UUID NOT NULL REFERENCES trainers(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT,
+    phone TEXT,
     form_data JSONB NOT NULL,
     notes TEXT,
+    last_plan_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -60,6 +62,8 @@ CREATE TABLE plans (
 CREATE INDEX idx_trainers_stripe_customer ON trainers(stripe_customer_id);
 CREATE INDEX idx_trainers_email ON trainers(email);
 CREATE INDEX idx_clients_trainer ON clients(trainer_id);
+CREATE INDEX idx_clients_last_plan_date ON clients(trainer_id, last_plan_date DESC NULLS LAST);
+CREATE INDEX idx_clients_email ON clients(trainer_id, email);
 CREATE INDEX idx_plans_trainer ON plans(trainer_id);
 CREATE INDEX idx_plans_client ON plans(client_id);
 CREATE INDEX idx_plans_created ON plans(created_at DESC);
