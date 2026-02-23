@@ -1,10 +1,14 @@
 import { defineConfig } from 'vitest/config'
 import path from 'path'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     globals: true,
-    environment: 'node',
+    // Use happy-dom for component tests, node for integration tests
+    // Test files can override with @vitest-environment comment
+    environment: 'happy-dom',
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     exclude: ['node_modules/', '.next/', 'out/'],

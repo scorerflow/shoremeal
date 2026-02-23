@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Integration tests for client management API endpoints
  * Tests: POST /api/clients, GET /api/clients, GET /api/clients/:id, PUT /api/clients/:id

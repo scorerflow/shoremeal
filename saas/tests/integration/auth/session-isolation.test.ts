@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Session Isolation Tests
  * Verifies that users cannot see each other's data

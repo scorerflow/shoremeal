@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * RLS Data Isolation Tests
  * Verifies Row Level Security policies prevent data leakage

@@ -20,6 +20,13 @@ export function createTestServiceClient() {
 }
 
 /**
+ * Alias for createTestServiceClient (for consistency with existing tests)
+ */
+export function createServiceClient() {
+  return createTestServiceClient()
+}
+
+/**
  * Clean up test data for a specific trainer
  */
 export async function cleanupTrainerData(trainerId: string) {

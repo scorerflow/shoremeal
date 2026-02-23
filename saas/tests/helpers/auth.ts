@@ -100,3 +100,22 @@ export async function deleteTestUser(userId: string) {
 
   // Database cascade will handle related records
 }
+
+/**
+ * Create an authenticated user and return userId (convenience wrapper)
+ */
+export async function createAuthenticatedUser() {
+  const testUser = await createTestUser()
+  return {
+    userId: testUser.user.id,
+    email: testUser.email,
+    accessToken: testUser.accessToken,
+  }
+}
+
+/**
+ * Delete user by ID (convenience wrapper)
+ */
+export async function deleteUser(userId: string) {
+  await deleteTestUser(userId)
+}
