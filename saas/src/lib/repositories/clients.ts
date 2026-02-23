@@ -5,8 +5,17 @@ export interface ClientWithPlans {
   id: string
   name: string
   email: string | null
+  phone: string | null
+  last_plan_date: string | null
   created_at: string
   plans: { id: string; status: PlanStatus; created_at: string }[]
+}
+
+export interface ClientStats {
+  total_plans: number
+  completed_plans: number
+  failed_plans: number
+  pending_plans: number
 }
 
 export async function createClient(
@@ -14,6 +23,8 @@ export async function createClient(
   data: {
     trainer_id: string
     name: string
+    email?: string | null
+    phone?: string | null
     form_data: Record<string, unknown>
   }
 ): Promise<Client> {
@@ -46,13 +57,20 @@ export async function getClientById(
 
 export async function getClientsByTrainer(
   db: SupabaseClient,
-  trainerId: string
+  trainerId: string,
+  options?: {
+    sortBy?: 'name' | 'last_plan_date' | 'created_at'
+    sortOrder?: 'asc' | 'desc'
+  }
 ): Promise<ClientWithPlans[]> {
+  const sortBy = options?.sortBy || 'last_plan_date'
+  const sortOrder = options?.sortOrder === 'asc'
+
   const { data, error } = await db
     .from('clients')
-    .select('id, name, email, created_at, plans(id, status, created_at)')
+    .select('id, name, email, phone, last_plan_date, created_at, plans(id, status, created_at)')
     .eq('trainer_id', trainerId)
-    .order('created_at', { ascending: false })
+    .order(sortBy, { ascending: sortOrder, nullsFirst: false })
 
   if (error) throw new Error(`Failed to fetch clients: ${error.message}`)
   return (data as unknown as ClientWithPlans[]) || []
@@ -76,8 +94,11 @@ export interface ClientWithAllPlans {
   trainer_id: string
   name: string
   email: string | null
+  phone: string | null
   form_data: Record<string, unknown>
+  last_plan_date: string | null
   created_at: string
+  updated_at: string
   plans: { id: string; status: PlanStatus; created_at: string; updated_at: string }[]
 }
 
@@ -88,11 +109,94 @@ export async function getClientWithPlans(
 ): Promise<ClientWithAllPlans | null> {
   const { data, error } = await db
     .from('clients')
-    .select('id, trainer_id, name, email, form_data, created_at, plans(id, status, created_at, updated_at)')
+    .select('id, trainer_id, name, email, phone, form_data, last_plan_date, created_at, updated_at, plans(id, status, created_at, updated_at)')
     .eq('id', clientId)
     .eq('trainer_id', trainerId)
     .single()
 
   if (error || !data) return null
   return data as unknown as ClientWithAllPlans
+}
+
+export async function updateClient(
+  db: SupabaseClient,
+  clientId: string,
+  trainerId: string,
+  data: {
+    name?: string
+    email?: string | null
+    phone?: string | null
+    form_data?: Record<string, unknown>
+  }
+): Promise<Client> {
+  const { data: client, error } = await db
+    .from('clients')
+    .update({ ...data, updated_at: new Date().toISOString() })
+    .eq('id', clientId)
+    .eq('trainer_id', trainerId)
+    .select()
+    .single()
+
+  if (error || !client) {
+    throw new Error(`Failed to update client: ${error?.message || 'Unknown error'}`)
+  }
+
+  return client as Client
+}
+
+export async function getClientWithStats(
+  db: SupabaseClient,
+  clientId: string,
+  trainerId: string
+): Promise<(Client & ClientStats) | null> {
+  const client = await getClientById(db, clientId)
+  if (!client || client.trainer_id !== trainerId) return null
+
+  const { data: plans } = await db
+    .from('plans')
+    .select('status')
+    .eq('client_id', clientId)
+
+  const stats: ClientStats = {
+    total_plans: plans?.length || 0,
+    completed_plans: plans?.filter((p) => p.status === 'completed').length || 0,
+    failed_plans: plans?.filter((p) => p.status === 'failed').length || 0,
+    pending_plans: plans?.filter((p) => p.status === 'pending' || p.status === 'generating').length || 0,
+  }
+
+  return { ...client, ...stats }
+}
+
+export async function getClientPlans(
+  db: SupabaseClient,
+  clientId: string,
+  trainerId: string
+): Promise<{ id: string; status: PlanStatus; created_at: string; updated_at: string }[]> {
+  const { data, error } = await db
+    .from('plans')
+    .select('id, status, created_at, updated_at')
+    .eq('client_id', clientId)
+    .eq('trainer_id', trainerId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(`Failed to fetch client plans: ${error.message}`)
+  return data || []
+}
+
+export async function updateClientLastPlanDate(
+  db: SupabaseClient,
+  clientId: string
+): Promise<void> {
+  const { error } = await db
+    .from('clients')
+    .update({
+      last_plan_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', clientId)
+
+  if (error) {
+    console.error('Failed to update client last_plan_date:', error)
+    // Don't throw - this is a denormalized field update, not critical
+  }
 }

@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { writeAuditLog } from '@/lib/audit'
 import { updatePlanStatus } from '@/lib/repositories/plans'
 import { incrementPlansUsed } from '@/lib/repositories/trainers'
+import { updateClientLastPlanDate } from '@/lib/repositories/clients'
 import { APP_CONFIG } from '@/lib/config'
 import { DISPLAY_LABELS } from '@/lib/constants'
 import { stripEmojis, parsePlanText } from '@/lib/pdf/parse-plan'
@@ -106,6 +107,9 @@ export const generatePlan = inngest.createFunction(
       })
 
       await incrementPlansUsed(supabase, trainerId)
+
+      // Update client's last_plan_date (denormalized for performance)
+      await updateClientLastPlanDate(supabase, clientId)
 
       await writeAuditLog({
         userId: trainerId,

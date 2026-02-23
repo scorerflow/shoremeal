@@ -11,7 +11,10 @@ export interface ClientDetailData {
   id: string
   name: string
   email: string | null
+  phone: string | null
+  last_plan_date: string | null
   created_at: string
+  updated_at: string
   form_data: ClientFormData
   plans: { id: string; status: PlanStatus; created_at: string; updated_at: string }[]
 }
@@ -28,7 +31,10 @@ export async function getClientDetail(
     id: result.id,
     name: result.name,
     email: result.email,
+    phone: result.phone,
+    last_plan_date: result.last_plan_date,
     created_at: result.created_at,
+    updated_at: result.updated_at,
     form_data: result.form_data as unknown as ClientFormData,
     plans: result.plans,
   }

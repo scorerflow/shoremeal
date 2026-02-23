@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { handleRouteError } from '@/lib/errors'
-import { getClientById } from '@/lib/repositories/clients'
+import { getClientById, updateClient } from '@/lib/repositories/clients'
 import { AppError } from '@/lib/errors'
+import { updateClientSchema } from '@/lib/validation'
+import { writeAuditLog } from '@/lib/audit'
 
 export const GET = withAuth(async (request, { user, supabase }, params) => {
   try {
@@ -28,6 +30,10 @@ export const GET = withAuth(async (request, { user, supabase }, params) => {
     return NextResponse.json({
       id: client.id,
       name: client.name,
+      email: client.email,
+      phone: client.phone,
+      last_plan_date: client.last_plan_date,
+      created_at: client.created_at,
       age: formData.age,
       gender: formData.gender,
       height: formData.height,
@@ -48,5 +54,74 @@ export const GET = withAuth(async (request, { user, supabase }, params) => {
     })
   } catch (error) {
     return handleRouteError(error, 'clients.get')
+  }
+})
+
+export const PUT = withAuth(async (request, { user, supabase }, params) => {
+  try {
+    const clientId = params?.id
+    if (!clientId) {
+      throw new AppError('Client ID is required', 'VALIDATION_ERROR', 400)
+    }
+
+    const body = await request.json()
+    const validatedData = updateClientSchema.parse(body)
+
+    // Separate profile fields from form_data fields
+    const profileFields: { name?: string; email?: string | null; phone?: string | null } = {}
+    const formDataFields: Record<string, unknown> = {}
+
+    if (validatedData.name !== undefined) profileFields.name = validatedData.name
+    if (validatedData.email !== undefined) profileFields.email = validatedData.email || null
+    if (validatedData.phone !== undefined) profileFields.phone = validatedData.phone || null
+
+    // All other fields go into form_data
+    const formDataKeys = [
+      'age', 'gender', 'height', 'weight', 'ideal_weight', 'activity_level',
+      'goal', 'dietary_type', 'allergies', 'dislikes', 'preferences',
+      'budget', 'cooking_skill', 'prep_time', 'meals_per_day', 'plan_duration', 'meal_prep_style'
+    ] as const
+
+    for (const key of formDataKeys) {
+      if (validatedData[key] !== undefined) {
+        formDataFields[key] = validatedData[key]
+      }
+    }
+
+    // Get existing client to merge form_data
+    const existingClient = await getClientById(supabase, clientId)
+    if (!existingClient || existingClient.trainer_id !== user.id) {
+      throw new AppError('Client not found', 'FORBIDDEN', 404)
+    }
+
+    // Merge form_data
+    const updatedFormData = {
+      ...existingClient.form_data,
+      ...formDataFields,
+    }
+
+    const updatedClient = await updateClient(supabase, clientId, user.id, {
+      ...profileFields,
+      ...(Object.keys(formDataFields).length > 0 && { form_data: updatedFormData }),
+    })
+
+    writeAuditLog({
+      userId: user.id,
+      action: 'client.updated',
+      resourceType: 'client',
+      resourceId: clientId,
+      metadata: { updatedFields: Object.keys({ ...profileFields, ...formDataFields }) },
+      ipAddress: request.headers.get('x-forwarded-for') || undefined,
+    })
+
+    return NextResponse.json({
+      id: updatedClient.id,
+      name: updatedClient.name,
+      email: updatedClient.email,
+      phone: updatedClient.phone,
+      updated_at: updatedClient.updated_at,
+    })
+  } catch (error) {
+    return handleRouteError(error, 'clients.update')
   }
 })

@@ -11,6 +11,8 @@ export interface ClientRow {
   id: string
   name: string
   email: string | null
+  phone: string | null
+  last_plan_date: string | null
   created_at: string
   plans: { id: string; status: PlanStatus; created_at: string }[]
 }

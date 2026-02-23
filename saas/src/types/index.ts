@@ -85,7 +85,9 @@ export interface Client {
   trainer_id: string
   name: string
   email: string | null
+  phone: string | null
   form_data: ClientFormData
+  last_plan_date: string | null
   created_at: string
   updated_at: string
 }
