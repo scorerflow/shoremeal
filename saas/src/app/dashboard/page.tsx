@@ -83,8 +83,8 @@ export default async function DashboardPage() {
               href="/dashboard/clients/new"
               className={`block p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors ${!hasSubscription ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <p className="font-medium text-gray-900">Create New Plan</p>
-              <p className="text-sm text-gray-600">Generate a nutrition plan for a client</p>
+              <p className="font-medium text-gray-900">Add Client</p>
+              <p className="text-sm text-gray-600">Create a client profile and generate their first plan</p>
             </Link>
             <Link
               href="/dashboard/clients"
