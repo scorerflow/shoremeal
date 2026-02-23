@@ -48,3 +48,6 @@ test_nutrition_plan_*.pdf
 
 # Claude Code
 .claude/
+
+# Supabase
+saas/supabase/.temp/
