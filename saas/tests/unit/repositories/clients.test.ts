@@ -10,6 +10,7 @@ import {
   createClient,
   getClientById,
   getClientsByTrainer,
+  getActiveClientCount,
   updateClient,
   getClientPlans,
   updateClientLastPlanDate,
@@ -467,6 +468,73 @@ describe('Clients Repository (Unit - Mocked)', () => {
       await expect(
         getClientPlans(mockSupabase, 'client-123', 'user-123')
       ).rejects.toThrow('Failed to fetch client plans: DB error')
+    })
+  })
+
+  describe('getActiveClientCount', () => {
+    it('should count clients with last_plan_date within 30 days', async () => {
+      const gteMock = vi.fn().mockResolvedValue({ count: 5, error: null })
+      const eqMock = vi.fn(() => ({ gte: gteMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      const result = await getActiveClientCount(mockSupabase, 'user-123')
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('clients')
+      expect(selectMock).toHaveBeenCalledWith('*', { count: 'exact', head: true })
+      expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
+      expect(gteMock).toHaveBeenCalledWith('last_plan_date', expect.any(String))
+      expect(result).toBe(5)
+    })
+
+    it('should return 0 when no active clients', async () => {
+      const gteMock = vi.fn().mockResolvedValue({ count: 0, error: null })
+      const eqMock = vi.fn(() => ({ gte: gteMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      const result = await getActiveClientCount(mockSupabase, 'user-123')
+
+      expect(result).toBe(0)
+    })
+
+    it('should return 0 when count is null', async () => {
+      const gteMock = vi.fn().mockResolvedValue({ count: null, error: null })
+      const eqMock = vi.fn(() => ({ gte: gteMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      const result = await getActiveClientCount(mockSupabase, 'user-123')
+
+      expect(result).toBe(0)
+    })
+
+    it('should throw error on database error', async () => {
+      const gteMock = vi.fn().mockResolvedValue({ count: null, error: { message: 'DB error' } })
+      const eqMock = vi.fn(() => ({ gte: gteMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      await expect(
+        getActiveClientCount(mockSupabase, 'user-123')
+      ).rejects.toThrow('Failed to count active clients: DB error')
+    })
+
+    it('should use a date approximately 30 days ago for the gte filter', async () => {
+      const gteMock = vi.fn().mockResolvedValue({ count: 3, error: null })
+      const eqMock = vi.fn(() => ({ gte: gteMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+
+      await getActiveClientCount(mockSupabase, 'user-123')
+
+      const dateArg = gteMock.mock.calls[0][1]
+      const passedDate = new Date(dateArg)
+      const expectedDate = new Date()
+      expectedDate.setDate(expectedDate.getDate() - 30)
+
+      // Should be within 5 seconds of expected (accounting for test execution time)
+      expect(Math.abs(passedDate.getTime() - expectedDate.getTime())).toBeLessThan(5000)
     })
   })
 

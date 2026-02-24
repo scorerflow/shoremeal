@@ -5,7 +5,8 @@ import { EmptyState } from '@/components/EmptyState'
 import { StatusIcon } from '@/components/StatusBadge'
 import { requireAuth } from '@/lib/auth'
 import { getClientsList } from '@/lib/data/clients'
-import { getClientCount } from '@/lib/repositories/clients'
+import { getClientCount, getActiveClientCount } from '@/lib/repositories/clients'
+import { getPlanCount } from '@/lib/repositories/plans'
 
 function formatLastPlanDate(dateString: string | null): string {
   if (!dateString) return 'Never'
@@ -23,20 +24,12 @@ function formatLastPlanDate(dateString: string | null): string {
 
 export default async function ClientsPage() {
   const { user, supabase } = await requireAuth()
-  const [{ clients, hasMore }, totalClientCount] = await Promise.all([
+  const [{ clients, hasMore }, totalClientCount, totalPlans, activeThisMonth] = await Promise.all([
     getClientsList(supabase, user.id),
     getClientCount(supabase, user.id),
+    getPlanCount(supabase, user.id),
+    getActiveClientCount(supabase, user.id),
   ])
-
-  // Calculate stats from current page of clients
-  const totalPlans = clients.reduce((sum, c) => sum + c.plans.length, 0)
-  const activeThisMonth = clients.filter((c) => {
-    if (!c.last_plan_date) return false
-    const lastPlan = new Date(c.last_plan_date)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    return lastPlan > thirtyDaysAgo
-  }).length
 
   return (
     <div>

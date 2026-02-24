@@ -95,6 +95,23 @@ export async function getClientCount(
   return count || 0
 }
 
+export async function getActiveClientCount(
+  db: SupabaseClient,
+  trainerId: string
+): Promise<number> {
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const { count, error } = await db
+    .from('clients')
+    .select('*', { count: 'exact', head: true })
+    .eq('trainer_id', trainerId)
+    .gte('last_plan_date', thirtyDaysAgo.toISOString())
+
+  if (error) throw new Error(`Failed to count active clients: ${error.message}`)
+  return count || 0
+}
+
 export interface ClientWithAllPlans {
   id: string
   trainer_id: string

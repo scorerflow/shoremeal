@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { getPlansGroupedByClient } from '@/lib/data/plans-grouped'
 import { getCachedTrainer } from '@/lib/data/cached'
+import { getPlanCount } from '@/lib/repositories/plans'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import PlansPageClient from './PlansPageClient'
@@ -12,11 +13,11 @@ export default async function PlansPage() {
   const trainer = await getCachedTrainer(user.id)
   const hasSubscription = trainer?.subscription_status === 'active'
 
-  // Fetch plans grouped by client (limited to 200 for performance)
-  const { groups, hasMore } = await getPlansGroupedByClient(supabase, user.id)
-
-  // Calculate total plans from current page
-  const totalPlans = groups.reduce((sum, client) => sum + client.plan_count, 0)
+  // Fetch plans grouped by client and total count in parallel
+  const [{ groups, hasMore }, totalPlans] = await Promise.all([
+    getPlansGroupedByClient(supabase, user.id),
+    getPlanCount(supabase, user.id),
+  ])
 
   return (
     <>
