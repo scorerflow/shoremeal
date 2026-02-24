@@ -14,6 +14,7 @@ export interface StatusData {
   errorMessage: string | null
   attempts: number
   plan_text?: string | null
+  client_id?: string | null
   client_name?: string | null
   created_at?: string
   updated_at?: string

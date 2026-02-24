@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
+import { ArrowLeft, Loader2, XCircle, FileText, Download, RefreshCw } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -27,6 +27,7 @@ interface PlanData {
   id: string
   status: PlanStatus
   plan_text?: string
+  client_id?: string
   client_name?: string
   created_at: string
   updated_at: string
@@ -34,6 +35,7 @@ interface PlanData {
 
 export default function PlanDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const planId = params.id as string
   const [plan, setPlan] = useState<PlanData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,6 +43,8 @@ export default function PlanDetailPage() {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [pollingTimeout, setPollingTimeout] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false)
 
   // Memoize markdown rendering to prevent unnecessary re-parsing
   const renderedMarkdown = useMemo(() => {
@@ -114,6 +118,34 @@ export default function PlanDetailPage() {
     }
   }
 
+  const handleRegenerate = async () => {
+    if (!confirmRegenerate) {
+      setConfirmRegenerate(true)
+      return
+    }
+
+    setRegenerating(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: plan?.client_id }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to regenerate plan')
+      }
+      const data = await res.json()
+      router.push(`/dashboard/plans/${data.plan_id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to regenerate plan')
+      setConfirmRegenerate(false)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   // Initial load only — QueueStatus handles all polling
   useEffect(() => {
     fetchStatus()
@@ -125,6 +157,7 @@ export default function PlanDetailPage() {
       id: data.id,
       status: data.status,
       plan_text: data.plan_text || undefined,
+      client_id: data.client_id || undefined,
       client_name: data.client_name || undefined,
       created_at: data.created_at || '',
       updated_at: data.updated_at || '',
@@ -191,23 +224,64 @@ export default function PlanDetailPage() {
           </p>
         </div>
         {plan.status === 'completed' && (
-          <button
-            onClick={handleDownloadPdf}
-            disabled={pdfLoading}
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            {pdfLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating PDF...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Download PDF
-              </>
+          <div className="flex items-center gap-3">
+            {plan.client_id && (
+              <div className="relative">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
+                  {regenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : confirmRegenerate ? (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Confirm
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Regenerate
+                    </>
+                  )}
+                </button>
+                {confirmRegenerate && !regenerating && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg z-10">
+                    <p className="text-xs text-yellow-800">
+                      This will generate a new plan using the client&apos;s current profile. It counts toward your monthly limit.
+                    </p>
+                    <button
+                      onClick={() => setConfirmRegenerate(false)}
+                      className="text-xs text-yellow-600 hover:text-yellow-800 mt-1 underline"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
