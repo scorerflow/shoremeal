@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -8,8 +8,7 @@ import { ArrowLeft, Loader2, XCircle, FileText, Download } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
-import { QueueStatus } from '@/components/QueueStatus'
-import { APP_CONFIG } from '@/lib/config'
+import { QueueStatus, StatusData } from '@/components/QueueStatus'
 import remarkGfm from 'remark-gfm'
 
 // Code-split react-markdown - only load when plan is completed
@@ -42,8 +41,6 @@ export default function PlanDetailPage() {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [pollingTimeout, setPollingTimeout] = useState(false)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const pollCountRef = useRef(0)
 
   // Memoize markdown rendering to prevent unnecessary re-parsing
   const renderedMarkdown = useMemo(() => {
@@ -56,6 +53,7 @@ export default function PlanDetailPage() {
     )
   }, [plan?.plan_text])
 
+  // Single initial fetch — no polling interval here
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/plans/${planId}/status`)
@@ -108,7 +106,6 @@ export default function PlanDetailPage() {
         throw new Error(data.error || 'Failed to retry plan generation')
       }
       await fetchStatus()
-      pollCountRef.current = 0
       setPollingTimeout(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to retry plan generation')
@@ -117,45 +114,26 @@ export default function PlanDetailPage() {
     }
   }
 
+  // Initial load only — QueueStatus handles all polling
   useEffect(() => {
-    pollCountRef.current = 0
-    setPollingTimeout(false)
-
-    const startPolling = async () => {
-      const status = await fetchStatus()
-
-      if (status === 'pending' || status === 'generating') {
-        intervalRef.current = setInterval(async () => {
-          pollCountRef.current += 1
-
-          if (pollCountRef.current >= APP_CONFIG.polling.maxPolls) {
-            if (intervalRef.current) {
-              clearInterval(intervalRef.current)
-              intervalRef.current = null
-            }
-            setPollingTimeout(true)
-            return
-          }
-
-          const newStatus = await fetchStatus()
-          if (newStatus !== 'pending' && newStatus !== 'generating') {
-            if (intervalRef.current) {
-              clearInterval(intervalRef.current)
-              intervalRef.current = null
-            }
-          }
-        }, APP_CONFIG.polling.intervalMs)
-      }
-    }
-
-    startPolling()
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
+    fetchStatus()
   }, [fetchStatus])
+
+  // QueueStatus callback: update plan state when status changes
+  const handleStatusChange = useCallback((_status: string, data: StatusData) => {
+    setPlan({
+      id: data.id,
+      status: data.status,
+      plan_text: data.plan_text || undefined,
+      client_name: data.client_name || undefined,
+      created_at: data.created_at || '',
+      updated_at: data.updated_at || '',
+    })
+  }, [])
+
+  const handlePollingTimeout = useCallback(() => {
+    setPollingTimeout(true)
+  }, [])
 
   if (loading) {
     return (
@@ -239,11 +217,8 @@ export default function PlanDetailPage() {
           <QueueStatus
             planId={planId}
             initialStatus={plan.status}
-            onStatusChange={(newStatus) => {
-              if (newStatus === 'completed' || newStatus === 'failed') {
-                fetchStatus() // Refresh plan data
-              }
-            }}
+            onStatusChange={handleStatusChange}
+            onPollingTimeout={handlePollingTimeout}
           />
         ) : (
           <StatusBanner status={plan.status} />
@@ -263,7 +238,6 @@ export default function PlanDetailPage() {
             <button
               type="button"
               onClick={() => {
-                pollCountRef.current = 0
                 setPollingTimeout(false)
                 fetchStatus()
               }}

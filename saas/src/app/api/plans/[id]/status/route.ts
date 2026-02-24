@@ -58,22 +58,16 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
     let estimatedMinutes = 0
 
     if (plan.status === 'pending' || plan.status === 'generating') {
-      // Count plans ahead in queue
-      // Plans are processed in order of created_at (FIFO)
-      const { count: plansAhead } = await supabase
+      // Single query: fetch created_at of all queued plans, count in JS
+      // Queue is inherently small (plans process quickly), so fetching timestamps is negligible
+      const { data: queuedPlans } = await supabase
         .from('plans')
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'generating'])
-        .lt('created_at', plan.created_at)
-
-      // Count total plans currently in queue
-      const { count: totalPlans } = await supabase
-        .from('plans')
-        .select('*', { count: 'exact', head: true })
+        .select('created_at')
         .in('status', ['pending', 'generating'])
 
-      queuePosition = (plansAhead || 0) + 1
-      totalInQueue = totalPlans || 1
+      const plansAhead = queuedPlans?.filter(p => p.created_at < plan.created_at).length || 0
+      totalInQueue = queuedPlans?.length || 1
+      queuePosition = plansAhead + 1
 
       // Time estimation algorithm:
       // - Average plan takes ~30 seconds (Claude API + PDF generation)

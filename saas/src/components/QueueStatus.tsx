@@ -1,15 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Loader2, Clock, Users } from 'lucide-react'
+import { APP_CONFIG } from '@/lib/config'
 
-interface QueueStatusProps {
-  planId: string
-  initialStatus?: 'pending' | 'generating' | 'completed' | 'failed'
-  onStatusChange?: (status: string) => void
-}
-
-interface StatusData {
+export interface StatusData {
   id: string
   status: 'pending' | 'generating' | 'completed' | 'failed'
   queuePosition: number
@@ -18,14 +13,40 @@ interface StatusData {
   elapsedSeconds: number
   errorMessage: string | null
   attempts: number
+  plan_text?: string | null
+  client_name?: string | null
+  created_at?: string
+  updated_at?: string
 }
 
-export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange }: QueueStatusProps) {
+interface QueueStatusProps {
+  planId: string
+  initialStatus?: 'pending' | 'generating' | 'completed' | 'failed'
+  onStatusChange?: (status: string, data: StatusData) => void
+  onPollingTimeout?: () => void
+}
+
+export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange, onPollingTimeout }: QueueStatusProps) {
   const [status, setStatus] = useState<StatusData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const pollCountRef = useRef(0)
+  const onStatusChangeRef = useRef(onStatusChange)
+  const onPollingTimeoutRef = useRef(onPollingTimeout)
+
+  // Keep refs in sync to avoid stale closures without re-triggering the effect
+  onStatusChangeRef.current = onStatusChange
+  onPollingTimeoutRef.current = onPollingTimeout
+
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null
+    pollCountRef.current = 0
 
     const fetchStatus = async () => {
       try {
@@ -39,16 +60,14 @@ export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange 
         setStatus(data)
         setError(null)
 
-        // Notify parent of status change
-        if (onStatusChange && data.status !== initialStatus) {
-          onStatusChange(data.status)
+        // Notify parent of status change with full data
+        if (onStatusChangeRef.current && data.status !== initialStatus) {
+          onStatusChangeRef.current(data.status, data)
         }
 
         // Stop polling if plan is complete or failed
         if (data.status === 'completed' || data.status === 'failed') {
-          if (intervalId) {
-            clearInterval(intervalId)
-          }
+          stopPolling()
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch status')
@@ -58,17 +77,23 @@ export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange 
     // Initial fetch
     fetchStatus()
 
-    // Poll every 2 seconds (only if not completed/failed)
+    // Poll using config interval (only if not completed/failed)
     if (initialStatus === 'pending' || initialStatus === 'generating') {
-      intervalId = setInterval(fetchStatus, 2000)
+      intervalRef.current = setInterval(() => {
+        pollCountRef.current += 1
+
+        if (pollCountRef.current >= APP_CONFIG.polling.maxPolls) {
+          stopPolling()
+          onPollingTimeoutRef.current?.()
+          return
+        }
+
+        fetchStatus()
+      }, APP_CONFIG.polling.intervalMs)
     }
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
-    }
-  }, [planId, initialStatus, onStatusChange])
+    return stopPolling
+  }, [planId, initialStatus, stopPolling])
 
   if (error) {
     return (
