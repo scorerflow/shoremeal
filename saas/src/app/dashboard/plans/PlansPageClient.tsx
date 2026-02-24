@@ -10,6 +10,7 @@ interface PlansPageClientProps {
   groupedClients: ClientWithPlans[]
   hasSubscription: boolean
   totalPlans: number
+  hasMore?: boolean
 }
 
 function formatLastPlanDate(dateString: string): string {
@@ -24,7 +25,7 @@ function formatLastPlanDate(dateString: string): string {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default function PlansPageClient({ groupedClients, hasSubscription, totalPlans }: PlansPageClientProps) {
+export default function PlansPageClient({ groupedClients, hasSubscription, totalPlans, hasMore }: PlansPageClientProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
 
   const toggleClient = (clientId: string) => {
@@ -192,6 +193,11 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
           </div>
         )
       })}
+      {hasMore && (
+        <p className="text-sm text-gray-500 text-center py-2">
+          Showing most recent {totalPlans} plans. Older plans are not displayed.
+        </p>
+      )}
     </div>
   )
 }

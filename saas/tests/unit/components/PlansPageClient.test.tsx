@@ -58,7 +58,7 @@ describe('PlansPageClient', () => {
 
   describe('Empty State', () => {
     it('should render empty state when no plans exist (with subscription)', () => {
-      render(<PlansPageClient groupedClients={[]} hasSubscription={true} totalPlans={0} />)
+      render(<PlansPageClient groupedClients={[]} hasSubscription={true} totalPlans={0} hasMore={false} />)
 
       expect(screen.getByText('No plans yet')).toBeInTheDocument()
       expect(screen.getByText('Create your first nutrition plan for a client.')).toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('PlansPageClient', () => {
     })
 
     it('should render empty state when no plans exist (without subscription)', () => {
-      render(<PlansPageClient groupedClients={[]} hasSubscription={false} totalPlans={0} />)
+      render(<PlansPageClient groupedClients={[]} hasSubscription={false} totalPlans={0} hasMore={false} />)
 
       expect(screen.getByText('No plans yet')).toBeInTheDocument()
       expect(screen.getByText('Subscribe to start generating nutrition plans.')).toBeInTheDocument()
@@ -84,6 +84,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -103,6 +104,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -122,6 +124,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -148,6 +151,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans, client2]}
           hasSubscription={true}
           totalPlans={6}
+          hasMore={false}
         />
       )
 
@@ -175,6 +179,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -191,6 +196,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -207,6 +213,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -233,6 +240,7 @@ describe('PlansPageClient', () => {
           groupedClients={[clientWithOnlyCompleted]}
           hasSubscription={true}
           totalPlans={1}
+          hasMore={false}
         />
       )
 
@@ -260,6 +268,7 @@ describe('PlansPageClient', () => {
           groupedClients={[clientGenerating]}
           hasSubscription={true}
           totalPlans={2}
+          hasMore={false}
         />
       )
 
@@ -284,7 +293,7 @@ describe('PlansPageClient', () => {
       }
 
       render(
-        <PlansPageClient groupedClients={[clientToday]} hasSubscription={true} totalPlans={1} />
+        <PlansPageClient groupedClients={[clientToday]} hasSubscription={true} totalPlans={1} hasMore={false} />
       )
 
       expect(screen.getByText(/Last plan: Today/)).toBeInTheDocument()
@@ -304,6 +313,7 @@ describe('PlansPageClient', () => {
           groupedClients={[clientYesterday]}
           hasSubscription={true}
           totalPlans={1}
+          hasMore={false}
         />
       )
 
@@ -320,7 +330,7 @@ describe('PlansPageClient', () => {
       }
 
       render(
-        <PlansPageClient groupedClients={[clientRecent]} hasSubscription={true} totalPlans={1} />
+        <PlansPageClient groupedClients={[clientRecent]} hasSubscription={true} totalPlans={1} hasMore={false} />
       )
 
       expect(screen.getByText(/Last plan: 3 days ago/)).toBeInTheDocument()
@@ -336,7 +346,7 @@ describe('PlansPageClient', () => {
       }
 
       render(
-        <PlansPageClient groupedClients={[clientWeeks]} hasSubscription={true} totalPlans={1} />
+        <PlansPageClient groupedClients={[clientWeeks]} hasSubscription={true} totalPlans={1} hasMore={false} />
       )
 
       expect(screen.getByText(/Last plan: 2 weeks ago/)).toBeInTheDocument()
@@ -352,7 +362,7 @@ describe('PlansPageClient', () => {
       }
 
       render(
-        <PlansPageClient groupedClients={[clientOld]} hasSubscription={true} totalPlans={1} />
+        <PlansPageClient groupedClients={[clientOld]} hasSubscription={true} totalPlans={1} hasMore={false} />
       )
 
       // Should show formatted date (e.g., "23 Dec 2025")
@@ -368,6 +378,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -386,6 +397,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -409,6 +421,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -429,6 +442,7 @@ describe('PlansPageClient', () => {
           groupedClients={[mockClientWithPlans]}
           hasSubscription={true}
           totalPlans={3}
+          hasMore={false}
         />
       )
 
@@ -439,6 +453,34 @@ describe('PlansPageClient', () => {
       // Second plan has 0 tokens - check it doesn't show "0 tokens"
       const planElements = screen.getAllByText(/\d{1,2}:\d{2}/)
       expect(planElements[1].textContent).not.toContain('0 tokens')
+    })
+  })
+
+  describe('HasMore Indicator', () => {
+    it('should not render hasMore indicator when hasMore is false', () => {
+      render(
+        <PlansPageClient
+          groupedClients={[mockClientWithPlans]}
+          hasSubscription={true}
+          totalPlans={3}
+          hasMore={false}
+        />
+      )
+
+      expect(screen.queryByText(/Showing most recent/)).not.toBeInTheDocument()
+    })
+
+    it('should render hasMore indicator when hasMore is true', () => {
+      render(
+        <PlansPageClient
+          groupedClients={[mockClientWithPlans]}
+          hasSubscription={true}
+          totalPlans={200}
+          hasMore={true}
+        />
+      )
+
+      expect(screen.getByText(/Showing most recent 200 plans/)).toBeInTheDocument()
     })
   })
 })

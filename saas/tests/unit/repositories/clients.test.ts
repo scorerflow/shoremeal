@@ -219,8 +219,16 @@ describe('Clients Repository (Unit - Mocked)', () => {
   })
 
   describe('getClientsByTrainer', () => {
-    it('should retrieve all clients for trainer', async () => {
-      // Mock data with nested plans structure (from Supabase join)
+    function createClientsMock(data: any[], error: any = null) {
+      const rangeMock = vi.fn().mockResolvedValue({ data, error })
+      const orderMock = vi.fn(() => ({ range: rangeMock }))
+      const eqMock = vi.fn(() => ({ order: orderMock }))
+      const selectMock = vi.fn(() => ({ eq: eqMock }))
+      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+      return { selectMock, eqMock, orderMock, rangeMock }
+    }
+
+    it('should retrieve clients for trainer with hasMore=false', async () => {
       const mockClients = [
         {
           id: 'client-1',
@@ -242,10 +250,7 @@ describe('Clients Repository (Unit - Mocked)', () => {
         },
       ]
 
-      const orderMock = vi.fn().mockResolvedValue({ data: mockClients, error: null })
-      const eqMock = vi.fn(() => ({ order: orderMock }))
-      const selectMock = vi.fn(() => ({ eq: eqMock }))
-      mockSupabase.from = vi.fn(() => ({ select: selectMock })) as any
+      const { selectMock, eqMock, orderMock, rangeMock } = createClientsMock(mockClients)
 
       const result = await getClientsByTrainer(mockSupabase, 'user-123')
 
@@ -254,21 +259,30 @@ describe('Clients Repository (Unit - Mocked)', () => {
       )
       expect(eqMock).toHaveBeenCalledWith('trainer_id', 'user-123')
       expect(orderMock).toHaveBeenCalledWith('last_plan_date', { ascending: false, nullsFirst: false })
-      expect(result).toEqual(mockClients)
+      expect(rangeMock).toHaveBeenCalledWith(0, 100) // default limit=100
+      expect(result).toEqual({ clients: mockClients, hasMore: false })
     })
 
-    it('should sort clients by name ascending', async () => {
+    it('should return hasMore=true when results exceed limit', async () => {
+      // 3 results with limit=2 → hasMore=true, trimmed to 2
       const mockClients = [
         { id: '1', name: 'Alice', plans: [] },
         { id: '2', name: 'Bob', plans: [] },
+        { id: '3', name: 'Charlie', plans: [] },
       ]
 
-      const orderMock = vi.fn().mockResolvedValue({ data: mockClients, error: null })
-      mockSupabase.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({ order: orderMock })),
-        })),
-      })) as any
+      createClientsMock(mockClients)
+
+      const result = await getClientsByTrainer(mockSupabase, 'user-123', { limit: 2 })
+
+      expect(result.hasMore).toBe(true)
+      expect(result.clients).toHaveLength(2)
+      expect(result.clients[0].name).toBe('Alice')
+      expect(result.clients[1].name).toBe('Bob')
+    })
+
+    it('should sort clients by name ascending', async () => {
+      const { orderMock } = createClientsMock([])
 
       await getClientsByTrainer(mockSupabase, 'user-123', {
         sortBy: 'name',
@@ -279,12 +293,7 @@ describe('Clients Repository (Unit - Mocked)', () => {
     })
 
     it('should sort clients by last_plan_date descending', async () => {
-      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null })
-      mockSupabase.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({ order: orderMock })),
-        })),
-      })) as any
+      const { orderMock } = createClientsMock([])
 
       await getClientsByTrainer(mockSupabase, 'user-123', {
         sortBy: 'last_plan_date',
@@ -295,15 +304,7 @@ describe('Clients Repository (Unit - Mocked)', () => {
     })
 
     it('should throw error on database error', async () => {
-      const orderMock = vi.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'DB error' },
-      })
-      mockSupabase.from = vi.fn(() => ({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({ order: orderMock })),
-        })),
-      })) as any
+      createClientsMock(null, { message: 'DB error' })
 
       await expect(
         getClientsByTrainer(mockSupabase, 'user-123')

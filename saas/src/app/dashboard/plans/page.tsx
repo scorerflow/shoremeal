@@ -12,17 +12,17 @@ export default async function PlansPage() {
   const trainer = await getTrainerById(supabase, user.id)
   const hasSubscription = trainer?.subscription_status === 'active'
 
-  // Fetch plans grouped by client
-  const groupedClients = await getPlansGroupedByClient(supabase, user.id)
+  // Fetch plans grouped by client (limited to 200 for performance)
+  const { groups, hasMore } = await getPlansGroupedByClient(supabase, user.id)
 
-  // Calculate total plans
-  const totalPlans = groupedClients.reduce((sum, client) => sum + client.plan_count, 0)
+  // Calculate total plans from current page
+  const totalPlans = groups.reduce((sum, client) => sum + client.plan_count, 0)
 
   return (
     <>
       <PageHeader
         title="Plans"
-        subtitle={`${totalPlans} plan${totalPlans !== 1 ? 's' : ''} generated across ${groupedClients.length} client${groupedClients.length !== 1 ? 's' : ''}`}
+        subtitle={`${totalPlans} plan${totalPlans !== 1 ? 's' : ''} generated across ${groups.length} client${groups.length !== 1 ? 's' : ''}`}
         action={
           <Link href="/dashboard/clients/add" className="btn-primary">
             Add Client
@@ -30,9 +30,10 @@ export default async function PlansPage() {
         }
       />
       <PlansPageClient
-        groupedClients={groupedClients}
+        groupedClients={groups}
         hasSubscription={hasSubscription}
         totalPlans={totalPlans}
+        hasMore={hasMore}
       />
     </>
   )

@@ -55,25 +55,38 @@ export async function getClientById(
   return data as Client
 }
 
+export interface ClientsByTrainerResult {
+  clients: ClientWithPlans[]
+  hasMore: boolean
+}
+
 export async function getClientsByTrainer(
   db: SupabaseClient,
   trainerId: string,
   options?: {
     sortBy?: 'name' | 'last_plan_date' | 'created_at'
     sortOrder?: 'asc' | 'desc'
+    limit?: number
   }
-): Promise<ClientWithPlans[]> {
+): Promise<ClientsByTrainerResult> {
   const sortBy = options?.sortBy || 'last_plan_date'
   const sortOrder = options?.sortOrder === 'asc'
+  const limit = options?.limit ?? 100
 
   const { data, error } = await db
     .from('clients')
     .select('id, name, email, phone, last_plan_date, created_at, plans(id, status, created_at)')
     .eq('trainer_id', trainerId)
     .order(sortBy, { ascending: sortOrder, nullsFirst: false })
+    .range(0, limit)
 
   if (error) throw new Error(`Failed to fetch clients: ${error.message}`)
-  return (data as unknown as ClientWithPlans[]) || []
+
+  const allClients = (data as unknown as ClientWithPlans[]) || []
+  const hasMore = allClients.length > limit
+  const clients = hasMore ? allClients.slice(0, limit) : allClients
+
+  return { clients, hasMore }
 }
 
 export async function getClientCount(
@@ -170,14 +183,21 @@ export async function getClientWithStats(
 export async function getClientPlans(
   db: SupabaseClient,
   clientId: string,
-  trainerId: string
+  trainerId: string,
+  options?: { limit?: number }
 ): Promise<{ id: string; status: PlanStatus; created_at: string; updated_at: string }[]> {
-  const { data, error } = await db
+  let query = db
     .from('plans')
     .select('id, status, created_at, updated_at')
     .eq('client_id', clientId)
     .eq('trainer_id', trainerId)
     .order('created_at', { ascending: false })
+
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const { data, error } = await query
 
   if (error) throw new Error(`Failed to fetch client plans: ${error.message}`)
   return data || []

@@ -11,7 +11,7 @@ export const GET = withAuth(async (request, { user, supabase }, params) => {
       throw new AppError('Client ID is required', 'VALIDATION_ERROR', 400)
     }
 
-    const plans = await getClientPlans(supabase, clientId, user.id)
+    const plans = await getClientPlans(supabase, clientId, user.id, { limit: 50 })
 
     return NextResponse.json(plans)
   } catch (error) {

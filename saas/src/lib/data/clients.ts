@@ -5,7 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PlanStatus } from '@/types'
-import { getClientsByTrainer, type ClientWithPlans } from '@/lib/repositories/clients'
+import { getClientsByTrainer, type ClientWithPlans, type ClientsByTrainerResult } from '@/lib/repositories/clients'
 
 export interface ClientRow {
   id: string
@@ -17,9 +17,16 @@ export interface ClientRow {
   plans: { id: string; status: PlanStatus; created_at: string }[]
 }
 
+export interface ClientsListResult {
+  clients: ClientRow[]
+  hasMore: boolean
+}
+
 export async function getClientsList(
   supabase: SupabaseClient,
-  userId: string
-): Promise<ClientRow[]> {
-  return getClientsByTrainer(supabase, userId)
+  userId: string,
+  limit?: number
+): Promise<ClientsListResult> {
+  const result = await getClientsByTrainer(supabase, userId, limit ? { limit } : undefined)
+  return { clients: result.clients, hasMore: result.hasMore }
 }

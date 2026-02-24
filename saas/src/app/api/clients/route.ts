@@ -11,7 +11,7 @@ export const GET = withAuth(async (request, { user, supabase }) => {
     const sortBy = searchParams.get('sortBy') as 'name' | 'last_plan_date' | 'created_at' | null
     const sortOrder = searchParams.get('sortOrder') as 'asc' | 'desc' | null
 
-    const clients = await getClientsByTrainer(supabase, user.id, {
+    const { clients } = await getClientsByTrainer(supabase, user.id, {
       sortBy: sortBy || undefined,
       sortOrder: sortOrder || undefined,
     })

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { StatusIcon } from '@/components/StatusBadge'
 import { requireAuth } from '@/lib/auth'
 import { getClientsList } from '@/lib/data/clients'
+import { getClientCount } from '@/lib/repositories/clients'
 
 function formatLastPlanDate(dateString: string | null): string {
   if (!dateString) return 'Never'
@@ -22,9 +23,12 @@ function formatLastPlanDate(dateString: string | null): string {
 
 export default async function ClientsPage() {
   const { user, supabase } = await requireAuth()
-  const clients = await getClientsList(supabase, user.id)
+  const [{ clients, hasMore }, totalClientCount] = await Promise.all([
+    getClientsList(supabase, user.id),
+    getClientCount(supabase, user.id),
+  ])
 
-  // Calculate stats
+  // Calculate stats from current page of clients
   const totalPlans = clients.reduce((sum, c) => sum + c.plans.length, 0)
   const activeThisMonth = clients.filter((c) => {
     if (!c.last_plan_date) return false
@@ -52,7 +56,7 @@ export default async function ClientsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="card">
             <p className="text-sm font-medium text-gray-600 mb-1">Total Clients</p>
-            <p className="text-3xl font-bold text-gray-900">{clients.length}</p>
+            <p className="text-3xl font-bold text-gray-900">{totalClientCount}</p>
           </div>
           <div className="card">
             <p className="text-sm font-medium text-gray-600 mb-1">Active This Month</p>
@@ -153,6 +157,11 @@ export default async function ClientsPage() {
               </div>
             )
           })}
+          {hasMore && (
+            <p className="text-sm text-gray-500 text-center py-2">
+              Showing first {clients.length} of {totalClientCount} clients.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -29,25 +29,37 @@ export interface ClientWithPlans {
   }
 }
 
+export interface PlansGroupedResult {
+  groups: ClientWithPlans[]
+  hasMore: boolean
+}
+
 export async function getPlansGroupedByClient(
   supabase: SupabaseClient,
-  userId: string
-): Promise<ClientWithPlans[]> {
-  // Fetch all plans with client info
+  userId: string,
+  limit: number = 200
+): Promise<PlansGroupedResult> {
+  // Fetch limit+1 to detect if there are more plans beyond the limit
   const { data: plans, error } = await supabase
     .from('plans')
     .select('id, status, created_at, updated_at, tokens_used, generation_cost, client_id, clients!inner(id, name)')
     .eq('trainer_id', userId)
     .order('created_at', { ascending: false })
+    .range(0, limit)
 
   if (error) {
     throw new Error(`Failed to fetch plans: ${error.message}`)
   }
 
+  // Detect hasMore and trim to limit
+  const allPlans = plans || []
+  const hasMore = allPlans.length > limit
+  const trimmedPlans = hasMore ? allPlans.slice(0, limit) : allPlans
+
   // Group plans by client
   const clientMap = new Map<string, ClientWithPlans>()
 
-  for (const plan of plans || []) {
+  for (const plan of trimmedPlans) {
     const clientId = plan.client_id
     const clientName = (plan.clients as unknown as { name: string })?.name || 'Unknown Client'
 
@@ -90,7 +102,9 @@ export async function getPlansGroupedByClient(
   }
 
   // Convert map to array and sort by last_plan_date (most recent first)
-  return Array.from(clientMap.values()).sort(
+  const groups = Array.from(clientMap.values()).sort(
     (a, b) => new Date(b.last_plan_date).getTime() - new Date(a.last_plan_date).getTime()
   )
+
+  return { groups, hasMore }
 }
