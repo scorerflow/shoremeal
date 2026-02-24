@@ -41,14 +41,21 @@ export const MEAL_PREP_STYLES: SelectOption[] = [
   { value: 'mixed', label: 'Low variety (same meals all week)' },
 ]
 
+export const GENDERS: SelectOption[] = [
+  { value: 'M', label: 'Male' },
+  { value: 'F', label: 'Female' },
+]
+
 export const PLAN_DURATIONS: SelectOption[] = [
   { value: '3', label: '3 days' },
-  { value: '5', label: '5 days' },
-  { value: '7', label: '7 days (1 week)' },
-  { value: '14', label: '14 days (2 weeks)' },
+  { value: '7', label: '7 days' },
+  { value: '14', label: '14 days' },
+  { value: '21', label: '21 days' },
+  { value: '30', label: '30 days' },
 ]
 
 export const MEALS_PER_DAY: SelectOption[] = [
+  { value: '2', label: '2 meals' },
   { value: '3', label: '3 meals' },
   { value: '4', label: '4 meals' },
   { value: '5', label: '5 meals' },
@@ -71,4 +78,5 @@ export const DISPLAY_LABELS: Record<string, Record<string, string>> = {
   dietary_type: buildLabelMap(DIET_TYPES),
   cooking_skill: buildLabelMap(COOKING_SKILLS),
   meal_prep_style: buildLabelMap(MEAL_PREP_STYLES),
+  gender: buildLabelMap(GENDERS),
 }
