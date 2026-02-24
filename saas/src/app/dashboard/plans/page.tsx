@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { getPlansGroupedByClient } from '@/lib/data/plans-grouped'
-import { getTrainerById } from '@/lib/repositories/trainers'
+import { getCachedTrainer } from '@/lib/data/cached'
 import { PageHeader } from '@/components/PageHeader'
 import Link from 'next/link'
 import PlansPageClient from './PlansPageClient'
@@ -8,8 +8,8 @@ import PlansPageClient from './PlansPageClient'
 export default async function PlansPage() {
   const { user, supabase } = await requireAuth()
 
-  // Fetch trainer to check subscription
-  const trainer = await getTrainerById(supabase, user.id)
+  // Fetch trainer to check subscription (cached — shared with layout)
+  const trainer = await getCachedTrainer(user.id)
   const hasSubscription = trainer?.subscription_status === 'active'
 
   // Fetch plans grouped by client (limited to 200 for performance)

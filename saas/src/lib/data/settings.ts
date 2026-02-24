@@ -3,10 +3,8 @@
  * Fetches trainer profile and branding settings
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Trainer, Branding } from '@/types'
-import { getTrainerById } from '@/lib/repositories/trainers'
-import { getBrandingByTrainer } from '@/lib/repositories/branding'
+import { getCachedTrainer, getCachedBranding } from '@/lib/data/cached'
 
 export interface SettingsData {
   trainer: Trainer | null
@@ -14,11 +12,10 @@ export interface SettingsData {
 }
 
 export async function getSettingsData(
-  supabase: SupabaseClient,
   userId: string
 ): Promise<SettingsData> {
-  const trainer = await getTrainerById(supabase, userId)
-  const branding = await getBrandingByTrainer(supabase, userId)
+  const trainer = await getCachedTrainer(userId)
+  const branding = await getCachedBranding(userId)
 
   return {
     trainer,

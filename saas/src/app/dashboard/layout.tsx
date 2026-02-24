@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { LayoutDashboard, Users, FileText, Settings, LogOut } from 'lucide-react'
 import { requireAuth } from '@/lib/auth'
-import { getTrainerById } from '@/lib/repositories/trainers'
+import { getCachedTrainer } from '@/lib/data/cached'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -15,8 +15,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, supabase } = await requireAuth()
-  const trainer = await getTrainerById(supabase, user.id)
+  const { user } = await requireAuth()
+  const trainer = await getCachedTrainer(user.id)
   const userEmail = user.email || ''
 
   return (

@@ -7,8 +7,8 @@ import { getSettingsData } from '@/lib/data/settings'
 const DEV_MODE = process.env.DEV_MODE === 'true'
 
 export default async function SettingsPage() {
-  const { user, supabase } = await requireAuth()
-  const { trainer, branding } = await getSettingsData(supabase, user.id)
+  const { user } = await requireAuth()
+  const { trainer, branding } = await getSettingsData(user.id)
 
   const tier = trainer?.subscription_tier as SubscriptionTier | null
   const tierConfig = tier ? TIERS[tier] : null

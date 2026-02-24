@@ -5,7 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Trainer } from '@/types'
-import { getTrainerById } from '@/lib/repositories/trainers'
+import { getCachedTrainer } from '@/lib/data/cached'
 import { getClientCount } from '@/lib/repositories/clients'
 import { getPlanCount } from '@/lib/repositories/plans'
 
@@ -19,7 +19,7 @@ export async function getDashboardData(
   supabase: SupabaseClient,
   userId: string
 ): Promise<DashboardData> {
-  const trainer = await getTrainerById(supabase, userId)
+  const trainer = await getCachedTrainer(userId)
   const clientCount = await getClientCount(supabase, userId)
   const planCount = await getPlanCount(supabase, userId)
 
