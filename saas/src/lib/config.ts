@@ -74,8 +74,8 @@ export const APP_CONFIG = {
       }
     }
 
-    // On server-side, validate unless in DEV_MODE
-    if (devMode) {
+    // On server-side, validate unless in DEV_MODE or test mode
+    if (devMode || isTest) {
       return {
         priceIds: {
           starter: process.env.STRIPE_PRICE_STARTER || 'price_dev_starter',
