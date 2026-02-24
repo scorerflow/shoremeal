@@ -282,11 +282,11 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                   onChange={(e) => updateField('activity_level', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="sedentary">Sedentary</option>
-                  <option value="lightly_active">Lightly Active</option>
-                  <option value="moderately_active">Moderately Active</option>
-                  <option value="very_active">Very Active</option>
-                  <option value="extremely_active">Extremely Active</option>
+                  <option value="sedentary">Sedentary (little or no exercise)</option>
+                  <option value="lightly_active">Lightly active (1-3 days/week)</option>
+                  <option value="moderately_active">Moderately active (3-5 days/week)</option>
+                  <option value="very_active">Very active (6-7 days/week)</option>
+                  <option value="extremely_active">Extra active (physical job + exercise)</option>
                 </select>
               </div>
             </div>
@@ -305,10 +305,10 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                   onChange={(e) => updateField('goal', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="fat_loss">Fat Loss</option>
-                  <option value="muscle_gain">Muscle Gain</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="recomp">Recomposition</option>
+                  <option value="fat_loss">Fat loss (maintain muscle)</option>
+                  <option value="muscle_gain">Muscle gain / bulking</option>
+                  <option value="maintenance">Weight maintenance</option>
+                  <option value="recomp">General health & wellness</option>
                 </select>
               </div>
 
@@ -394,9 +394,9 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                   onChange={(e) => updateField('cooking_skill', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
+                  <option value="beginner">Beginner (simple recipes)</option>
+                  <option value="intermediate">Intermediate (moderate complexity)</option>
+                  <option value="advanced">Advanced (any complexity)</option>
                 </select>
               </div>
 
@@ -457,9 +457,9 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                   onChange={(e) => updateField('meal_prep_style', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="daily">Daily Variety</option>
-                  <option value="batch">Batch Cooking</option>
-                  <option value="mixed">Mixed</option>
+                  <option value="daily">High variety (different meals daily)</option>
+                  <option value="batch">Moderate variety (batch cooking - meals repeat every 2-3 days)</option>
+                  <option value="mixed">Low variety (same meals all week)</option>
                 </select>
               </div>
             </div>
