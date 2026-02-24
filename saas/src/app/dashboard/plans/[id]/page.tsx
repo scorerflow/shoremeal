@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { ArrowLeft, Loader2, XCircle, FileText, Download, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Loader2, XCircle, FileText, Download, RefreshCw, Mail, Check } from 'lucide-react'
 import { StatusBanner } from '@/components/StatusBadge'
 import { EmptyState } from '@/components/EmptyState'
 import { AlertBanner } from '@/components/AlertBanner'
@@ -29,6 +29,7 @@ interface PlanData {
   plan_text?: string
   client_id?: string
   client_name?: string
+  client_email?: string | null
   created_at: string
   updated_at: string
 }
@@ -45,6 +46,8 @@ export default function PlanDetailPage() {
   const [pollingTimeout, setPollingTimeout] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [confirmRegenerate, setConfirmRegenerate] = useState(false)
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   // Memoize markdown rendering to prevent unnecessary re-parsing
   const renderedMarkdown = useMemo(() => {
@@ -146,6 +149,24 @@ export default function PlanDetailPage() {
     }
   }
 
+  const handleSendEmail = async () => {
+    setEmailSending(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/plans/${planId}/email`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to send email')
+      }
+      setEmailSent(true)
+      setTimeout(() => setEmailSent(false), 5000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send email')
+    } finally {
+      setEmailSending(false)
+    }
+  }
+
   // Initial load only — QueueStatus handles all polling
   useEffect(() => {
     fetchStatus()
@@ -159,6 +180,7 @@ export default function PlanDetailPage() {
       plan_text: data.plan_text || undefined,
       client_id: data.client_id || undefined,
       client_name: data.client_name || undefined,
+      client_email: data.client_email || null,
       created_at: data.created_at || '',
       updated_at: data.updated_at || '',
     })
@@ -263,6 +285,30 @@ export default function PlanDetailPage() {
                   </div>
                 )}
               </div>
+            )}
+            {plan.client_email && (
+              <button
+                onClick={handleSendEmail}
+                disabled={emailSending || emailSent}
+                className={`btn-secondary inline-flex items-center gap-2 ${emailSent ? 'text-green-700 border-green-300 bg-green-50' : ''}`}
+              >
+                {emailSending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : emailSent ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Sent!
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-4 w-4" />
+                    Send to Client
+                  </>
+                )}
+              </button>
             )}
             <button
               onClick={handleDownloadPdf}

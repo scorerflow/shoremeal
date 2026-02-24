@@ -6,6 +6,7 @@ export type AuditAction =
   | 'plan.generation_failed'
   | 'plan.generation_timeout'
   | 'plan.retry_requested'
+  | 'plan.email_sent'
   | 'client.created'
   | 'client.updated'
   | 'subscription.created'

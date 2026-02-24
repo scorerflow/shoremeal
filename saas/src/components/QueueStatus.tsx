@@ -16,6 +16,7 @@ export interface StatusData {
   plan_text?: string | null
   client_id?: string | null
   client_name?: string | null
+  client_email?: string | null
   created_at?: string
   updated_at?: string
 }

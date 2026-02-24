@@ -31,7 +31,7 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
     // Fetch plan with RLS applied (automatically filters by trainer_id)
     const { data: plan, error: planError } = await supabase
       .from('plans')
-      .select('id, status, created_at, updated_at, trainer_id, error_message, attempts, plan_text, client_id, clients(name)')
+      .select('id, status, created_at, updated_at, trainer_id, error_message, attempts, plan_text, client_id, clients(name, email)')
       .eq('id', planId)
       .single()
 
@@ -104,6 +104,7 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
       plan_text: plan.plan_text || null,
       client_id: plan.client_id || null,
       client_name: plan.clients?.[0]?.name || null,
+      client_email: plan.clients?.[0]?.email || null,
       created_at: plan.created_at,
       updated_at: plan.updated_at,
     })
