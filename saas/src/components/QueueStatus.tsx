@@ -40,13 +40,22 @@ export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange,
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current)
+      clearTimeout(intervalRef.current)
       intervalRef.current = null
     }
   }, [])
 
   useEffect(() => {
     pollCountRef.current = 0
+    let stopped = false
+
+    const getInterval = (pollCount: number): number | null => {
+      const { fastPolls, fastIntervalMs, mediumPolls, mediumIntervalMs, slowPolls, slowIntervalMs } = APP_CONFIG.polling
+      if (pollCount < fastPolls) return fastIntervalMs
+      if (pollCount < fastPolls + mediumPolls) return mediumIntervalMs
+      if (pollCount < fastPolls + mediumPolls + slowPolls) return slowIntervalMs
+      return null // Exceeded all phases
+    }
 
     const fetchStatus = async () => {
       try {
@@ -68,31 +77,42 @@ export function QueueStatus({ planId, initialStatus = 'pending', onStatusChange,
         // Stop polling if plan is complete or failed
         if (data.status === 'completed' || data.status === 'failed') {
           stopPolling()
+          return
+        }
+
+        // Schedule next poll with backoff
+        if (!stopped) {
+          scheduleNext()
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch status')
+        // Still schedule next poll on error
+        if (!stopped) {
+          scheduleNext()
+        }
       }
+    }
+
+    const scheduleNext = () => {
+      pollCountRef.current += 1
+      const delay = getInterval(pollCountRef.current)
+
+      if (delay === null) {
+        stopPolling()
+        onPollingTimeoutRef.current?.()
+        return
+      }
+
+      intervalRef.current = setTimeout(fetchStatus, delay)
     }
 
     // Initial fetch
     fetchStatus()
 
-    // Poll using config interval (only if not completed/failed)
-    if (initialStatus === 'pending' || initialStatus === 'generating') {
-      intervalRef.current = setInterval(() => {
-        pollCountRef.current += 1
-
-        if (pollCountRef.current >= APP_CONFIG.polling.maxPolls) {
-          stopPolling()
-          onPollingTimeoutRef.current?.()
-          return
-        }
-
-        fetchStatus()
-      }, APP_CONFIG.polling.intervalMs)
+    return () => {
+      stopped = true
+      stopPolling()
     }
-
-    return stopPolling
   }, [planId, initialStatus, stopPolling])
 
   if (error) {

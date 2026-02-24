@@ -50,10 +50,6 @@ export default async function ClientDetailPage({
     )
   }
 
-  const sortedPlans = [...client.plans].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
-
   // Calculate stats
   const totalPlans = client.plans.length
   const completedPlans = client.plans.filter((p) => p.status === 'completed').length
@@ -273,7 +269,7 @@ export default async function ClientDetailPage({
               />
             ) : (
               <div className="space-y-3">
-                {sortedPlans.map((plan) => (
+                {client.plans.map((plan) => (
                   <Link
                     key={plan.id}
                     href={`/dashboard/plans/${plan.id}`}

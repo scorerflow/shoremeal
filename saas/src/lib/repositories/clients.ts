@@ -11,13 +11,6 @@ export interface ClientWithPlans {
   plans: { id: string; status: PlanStatus; created_at: string }[]
 }
 
-export interface ClientStats {
-  total_plans: number
-  completed_plans: number
-  failed_plans: number
-  pending_plans: number
-}
-
 export async function createClient(
   db: SupabaseClient,
   data: {
@@ -125,6 +118,7 @@ export async function getClientWithPlans(
     .select('id, trainer_id, name, email, phone, form_data, last_plan_date, created_at, updated_at, plans(id, status, created_at, updated_at)')
     .eq('id', clientId)
     .eq('trainer_id', trainerId)
+    .order('created_at', { ascending: false, referencedTable: 'plans' })
     .single()
 
   if (error || !data) return null
@@ -155,29 +149,6 @@ export async function updateClient(
   }
 
   return client as Client
-}
-
-export async function getClientWithStats(
-  db: SupabaseClient,
-  clientId: string,
-  trainerId: string
-): Promise<(Client & ClientStats) | null> {
-  const client = await getClientById(db, clientId)
-  if (!client || client.trainer_id !== trainerId) return null
-
-  const { data: plans } = await db
-    .from('plans')
-    .select('status')
-    .eq('client_id', clientId)
-
-  const stats: ClientStats = {
-    total_plans: plans?.length || 0,
-    completed_plans: plans?.filter((p) => p.status === 'completed').length || 0,
-    failed_plans: plans?.filter((p) => p.status === 'failed').length || 0,
-    pending_plans: plans?.filter((p) => p.status === 'pending' || p.status === 'generating').length || 0,
-  }
-
-  return { ...client, ...stats }
 }
 
 export async function getClientPlans(

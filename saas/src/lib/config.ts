@@ -126,10 +126,14 @@ export const APP_CONFIG = {
     },
   },
 
-  // Polling
+  // Polling (exponential backoff)
   polling: {
-    intervalMs: 3_000,
-    maxPolls: 100, // 5 minutes at 3s intervals
+    fastIntervalMs: 3_000,      // First phase: every 3s
+    fastPolls: 20,               // For 60 seconds (20 × 3s)
+    mediumIntervalMs: 10_000,   // Second phase: every 10s
+    mediumPolls: 24,             // For 4 minutes (24 × 10s)
+    slowIntervalMs: 60_000,     // Third phase: every 60s
+    slowPolls: 5,                // For 5 minutes (5 × 60s)
   },
 
   // Plan Timeout
