@@ -18,15 +18,15 @@ export async function getBrandingByTrainer(
 export async function getBrandingColours(
   db: SupabaseClient,
   trainerId: string
-): Promise<{ primary_colour: string; secondary_colour: string; accent_colour: string } | null> {
+): Promise<{ primary_colour: string; secondary_colour: string; accent_colour: string; logo_url: string | null } | null> {
   const { data, error } = await db
     .from('branding')
-    .select('primary_colour, secondary_colour, accent_colour')
+    .select('primary_colour, secondary_colour, accent_colour, logo_url')
     .eq('trainer_id', trainerId)
     .single()
 
   if (error || !data) return null
-  return data as { primary_colour: string; secondary_colour: string; accent_colour: string }
+  return data as { primary_colour: string; secondary_colour: string; accent_colour: string; logo_url: string | null }
 }
 
 export async function updateBranding(

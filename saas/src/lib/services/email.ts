@@ -54,6 +54,8 @@ export async function sendPlanToClient(
   const trainerEmail = trainer?.email || ''
   const clientName = plan.clients?.name || client.name
 
+  const logoUrl = branding?.logo_url || null
+
   const colours = {
     primary: branding?.primary_colour || APP_CONFIG.defaults.branding.primary,
     secondary: branding?.secondary_colour || APP_CONFIG.defaults.branding.secondary,
@@ -68,6 +70,7 @@ export async function sendPlanToClient(
     businessName,
     colours,
     createdAt: plan.created_at,
+    logoUrl,
   })
 
   // 5. Send email

@@ -501,6 +501,7 @@ describe('generatePlanPdfForExport', () => {
       primary_colour: '#FF5733',
       secondary_colour: '#33FF57',
       accent_colour: '#3357FF',
+      logo_url: null as string | null,
     }
 
     const mockPdfBuffer = Buffer.from('mock-pdf-data')
@@ -528,6 +529,7 @@ describe('generatePlanPdfForExport', () => {
         accent: '#3357FF',
       },
       createdAt: '2024-01-01T00:00:00Z',
+      logoUrl: null,
     })
   })
 

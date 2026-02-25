@@ -1,5 +1,5 @@
 import React from 'react'
-import { Document, Page, View, Text } from '@react-pdf/renderer'
+import { Document, Page, View, Text, Image } from '@react-pdf/renderer'
 import type { ParsedPlan } from '@/types'
 import { createStyles, type BrandColours } from './styles'
 
@@ -10,6 +10,7 @@ interface PlanDocumentProps {
   businessName: string
   colours: BrandColours
   createdAt: string
+  logoUrl?: string | null
 }
 
 function formatDate(iso: string): string {
@@ -159,11 +160,17 @@ function RichContent({ lines, colours }: { lines: string[]; colours: BrandColour
 
 // ── Cover Page ──────────────────────────────────────────────
 
-function CoverPage({ clientName, trainerName, businessName, colours, createdAt }: Omit<PlanDocumentProps, 'plan'>) {
+function CoverPage({ clientName, trainerName, businessName, colours, createdAt, logoUrl }: Omit<PlanDocumentProps, 'plan'>) {
   const s = createStyles(colours)
   return (
     <Page size="A4" style={{ padding: 0 }}>
       <View style={s.coverPage}>
+        {logoUrl && (
+          <Image
+            src={logoUrl}
+            style={{ width: 80, height: 80, marginBottom: 24, objectFit: 'contain' }}
+          />
+        )}
         <Text style={s.coverTitle}>Nutrition Plan</Text>
         <Text style={s.coverSubtitle}>Prepared for {clientName}</Text>
         <View style={s.coverDivider} />
@@ -210,7 +217,7 @@ function SectionHeader({ title, colours }: { title: string; colours: BrandColour
 // ── Main Document ───────────────────────────────────────────
 
 export function NutritionPlanDocument(props: PlanDocumentProps) {
-  const { plan, clientName, trainerName, businessName, colours, createdAt } = props
+  const { plan, clientName, trainerName, businessName, colours, createdAt, logoUrl } = props
 
   return (
     <Document
@@ -224,6 +231,7 @@ export function NutritionPlanDocument(props: PlanDocumentProps) {
         businessName={businessName}
         colours={colours}
         createdAt={createdAt}
+        logoUrl={logoUrl}
       />
       {plan.sections.map((section) => (
         <PageLayout key={section.title} trainerName={trainerName} colours={colours}>

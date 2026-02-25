@@ -169,6 +169,7 @@ export async function generatePlanPdfForExport(
   let trainerName: string
   let businessName: string
   let colours: { primary: string; secondary: string; accent: string }
+  let logoUrl: string | null = null
 
   if (DEV_MODE) {
     // Use mock trainer and branding data in DEV_MODE
@@ -188,6 +189,7 @@ export async function generatePlanPdfForExport(
 
     trainerName = trainer?.full_name || trainer?.business_name || 'Your Trainer'
     businessName = trainer?.business_name || trainerName
+    logoUrl = branding?.logo_url || null
 
     colours = {
       primary: branding?.primary_colour || APP_CONFIG.defaults.branding.primary,
@@ -203,6 +205,7 @@ export async function generatePlanPdfForExport(
     businessName,
     colours,
     createdAt: plan.created_at,
+    logoUrl,
   })
 
   return { pdfBuffer, clientName }

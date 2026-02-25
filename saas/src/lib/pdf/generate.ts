@@ -12,6 +12,7 @@ interface GeneratePdfOptions {
   businessName: string
   colours: BrandColours
   createdAt: string
+  logoUrl?: string | null
 }
 
 export async function generatePlanPdf(options: GeneratePdfOptions): Promise<Buffer> {
@@ -26,6 +27,7 @@ export async function generatePlanPdf(options: GeneratePdfOptions): Promise<Buff
     businessName: options.businessName,
     colours: options.colours,
     createdAt: options.createdAt,
+    logoUrl: options.logoUrl || null,
   })
 
   // eslint-disable-next-line

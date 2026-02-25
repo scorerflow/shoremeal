@@ -99,6 +99,7 @@ describe('sendPlanToClient', () => {
     primary_colour: '#FF5500',
     secondary_colour: '#333333',
     accent_colour: '#00AAFF',
+    logo_url: null as string | null,
   }
 
   beforeEach(() => {
@@ -154,6 +155,7 @@ describe('sendPlanToClient', () => {
         accent: '#00AAFF',
       },
       createdAt: defaultPlan.created_at,
+      logoUrl: null,
     })
   })
 
