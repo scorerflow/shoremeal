@@ -103,8 +103,8 @@ export const GET = withAuth(async (request: NextRequest, { user, supabase }, par
       attempts: plan.attempts || 0,
       plan_text: plan.plan_text || null,
       client_id: plan.client_id || null,
-      client_name: plan.clients?.[0]?.name || null,
-      client_email: plan.clients?.[0]?.email || null,
+      client_name: (plan.clients as unknown as { name: string } | null)?.name || null,
+      client_email: (plan.clients as unknown as { email: string } | null)?.email || null,
       created_at: plan.created_at,
       updated_at: plan.updated_at,
     })

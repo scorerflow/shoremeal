@@ -40,7 +40,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-01T01:00:00Z',
           tokens_used: 1000,
           generation_cost: 0.05,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-2',
@@ -50,7 +50,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-02T01:00:00Z',
           tokens_used: 0,
           generation_cost: 0,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
       ]
 
@@ -63,6 +63,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
       expect(result.groups[0]).toMatchObject({
         client_id: 'client-1',
         client_name: 'John Doe',
+        client_email: 'john@example.com',
         plan_count: 2,
       })
       expect(result.groups[0].plans).toHaveLength(2)
@@ -84,7 +85,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-01T01:00:00Z',
           tokens_used: 1000,
           generation_cost: 0.05,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-2',
@@ -94,7 +95,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-02T01:00:00Z',
           tokens_used: 500,
           generation_cost: 0.025,
-          clients: { id: 'client-2', name: 'Jane Smith' },
+          clients: { id: 'client-2', name: 'Jane Smith', email: 'jane@example.com' },
         },
       ]
 
@@ -118,7 +119,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-01T01:00:00Z',
           tokens_used: 1000,
           generation_cost: 0.05,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-2',
@@ -128,7 +129,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-02T01:00:00Z',
           tokens_used: 800,
           generation_cost: 0.04,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-3',
@@ -138,7 +139,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-03T01:00:00Z',
           tokens_used: 0,
           generation_cost: 0,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-4',
@@ -148,7 +149,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-04T01:00:00Z',
           tokens_used: 200,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
       ]
 
@@ -175,7 +176,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-01T01:00:00Z',
           tokens_used: 100,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-2',
@@ -185,7 +186,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-02T01:00:00Z',
           tokens_used: 100,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-3',
@@ -195,7 +196,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-03T01:00:00Z',
           tokens_used: 100,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
       ]
 
@@ -219,7 +220,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-01T01:00:00Z',
           tokens_used: 100,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
         {
           id: 'plan-2',
@@ -229,7 +230,7 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
           updated_at: '2024-01-02T01:00:00Z',
           tokens_used: 100,
           generation_cost: 0.01,
-          clients: { id: 'client-1', name: 'John Doe' },
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
         },
       ]
 
@@ -239,6 +240,57 @@ describe('Plans Grouped by Client (Unit - Mocked)', () => {
 
       expect(result.hasMore).toBe(false)
       expect(result.groups[0].plan_count).toBe(2)
+    })
+
+    it('should include client_email from joined client data', async () => {
+      const mockData = [
+        {
+          id: 'plan-1',
+          client_id: 'client-1',
+          status: 'completed',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T01:00:00Z',
+          tokens_used: 1000,
+          generation_cost: 0.05,
+          clients: { id: 'client-1', name: 'John Doe', email: 'john@example.com' },
+        },
+        {
+          id: 'plan-2',
+          client_id: 'client-2',
+          status: 'completed',
+          created_at: '2024-01-02T00:00:00Z',
+          updated_at: '2024-01-02T01:00:00Z',
+          tokens_used: 500,
+          generation_cost: 0.025,
+          clients: { id: 'client-2', name: 'Jane Smith', email: 'jane@example.com' },
+        },
+      ]
+
+      const mockSupabase = createMockSupabase(mockData)
+      const result = await getPlansGroupedByClient(mockSupabase, 'user-123')
+
+      expect(result.groups[0].client_email).toBe('jane@example.com')
+      expect(result.groups[1].client_email).toBe('john@example.com')
+    })
+
+    it('should default client_email to null when email is not present', async () => {
+      const mockData = [
+        {
+          id: 'plan-1',
+          client_id: 'client-1',
+          status: 'completed',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T01:00:00Z',
+          tokens_used: 1000,
+          generation_cost: 0.05,
+          clients: { id: 'client-1', name: 'No Email Client' },
+        },
+      ]
+
+      const mockSupabase = createMockSupabase(mockData)
+      const result = await getPlansGroupedByClient(mockSupabase, 'user-123')
+
+      expect(result.groups[0].client_email).toBeNull()
     })
 
     it('should throw error on database error', async () => {

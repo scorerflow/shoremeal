@@ -18,6 +18,7 @@ export interface GroupedPlan {
 export interface ClientWithPlans {
   client_id: string
   client_name: string
+  client_email: string | null
   plan_count: number
   last_plan_date: string
   plans: GroupedPlan[]
@@ -42,7 +43,7 @@ export async function getPlansGroupedByClient(
   // Fetch limit+1 to detect if there are more plans beyond the limit
   const { data: plans, error } = await supabase
     .from('plans')
-    .select('id, status, created_at, updated_at, tokens_used, generation_cost, client_id, clients!inner(id, name)')
+    .select('id, status, created_at, updated_at, tokens_used, generation_cost, client_id, clients!inner(id, name, email)')
     .eq('trainer_id', userId)
     .order('created_at', { ascending: false })
     .range(0, limit)
@@ -61,12 +62,15 @@ export async function getPlansGroupedByClient(
 
   for (const plan of trimmedPlans) {
     const clientId = plan.client_id
-    const clientName = (plan.clients as unknown as { name: string })?.name || 'Unknown Client'
+    const client = plan.clients as unknown as { name: string; email?: string }
+    const clientName = client?.name || 'Unknown Client'
+    const clientEmail = client?.email || null
 
     if (!clientMap.has(clientId)) {
       clientMap.set(clientId, {
         client_id: clientId,
         client_name: clientName,
+        client_email: clientEmail,
         plan_count: 0,
         last_plan_date: plan.created_at,
         plans: [],

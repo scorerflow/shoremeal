@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { FileText, ChevronDown, ChevronRight, Download, Calendar, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { FileText, ChevronDown, ChevronRight, Download, Calendar, CheckCircle2, Clock, XCircle, Mail, Loader2, Check } from 'lucide-react'
 import { ClientWithPlans } from '@/lib/data/plans-grouped'
 import { StatusPill, getStatusConfig } from '@/components/StatusBadge'
 
@@ -27,6 +27,7 @@ function formatLastPlanDate(dateString: string): string {
 
 export default function PlansPageClient({ groupedClients, hasSubscription, totalPlans, hasMore }: PlansPageClientProps) {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
+  const [emailState, setEmailState] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({})
 
   const toggleClient = (clientId: string) => {
     setExpandedClients((prev) => {
@@ -38,6 +39,26 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
       }
       return next
     })
+  }
+
+  const handleSendEmail = async (planId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (emailState[planId] === 'sending') return
+
+    setEmailState((prev) => ({ ...prev, [planId]: 'sending' }))
+    try {
+      const res = await fetch(`/api/plans/${planId}/email`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to send email')
+      }
+      setEmailState((prev) => ({ ...prev, [planId]: 'sent' }))
+      setTimeout(() => {
+        setEmailState((prev) => ({ ...prev, [planId]: 'idle' }))
+      }, 5000)
+    } catch {
+      setEmailState((prev) => ({ ...prev, [planId]: 'idle' }))
+    }
   }
 
   if (totalPlans === 0) {
@@ -183,6 +204,24 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
                           >
                             <Download className="h-4 w-4" />
                           </a>
+                        )}
+                        {plan.status === 'completed' && client.client_email && (
+                          <button
+                            onClick={(e) => handleSendEmail(plan.id, e)}
+                            disabled={emailState[plan.id] === 'sending'}
+                            className={`btn-secondary text-sm py-2 px-3 inline-flex items-center gap-1 ${
+                              emailState[plan.id] === 'sent' ? 'text-green-600' : ''
+                            }`}
+                            title={`Email plan to ${client.client_email}`}
+                          >
+                            {emailState[plan.id] === 'sending' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : emailState[plan.id] === 'sent' ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
+                          </button>
                         )}
                       </div>
                     </div>
