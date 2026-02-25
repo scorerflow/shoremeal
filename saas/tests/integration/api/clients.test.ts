@@ -315,7 +315,7 @@ describe('Client Management API', () => {
         .single()
 
       expect(error).toBeNull()
-      expect(data.trainer_id).toBe(userId)
+      expect(data!.trainer_id).toBe(userId)
     })
 
     it('should have last_plan_date as null for new client', async () => {
@@ -327,7 +327,7 @@ describe('Client Management API', () => {
         .single()
 
       expect(error).toBeNull()
-      expect(data.last_plan_date).toBeNull()
+      expect(data!.last_plan_date).toBeNull()
     })
   })
 })

@@ -20,6 +20,7 @@ describe('PlansPageClient', () => {
   const mockClientWithPlans: ClientWithPlans = {
     client_id: 'client-1',
     client_name: 'John Doe',
+    client_email: 'john@example.com',
     plan_count: 3,
     last_plan_date: new Date().toISOString(),
     plans: [

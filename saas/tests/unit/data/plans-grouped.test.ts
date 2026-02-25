@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { getPlansGroupedByClient } from '@/lib/data/plans-grouped'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-function createMockSupabase(data: any[], error: any = null) {
+function createMockSupabase(data: any[] | null, error: any = null) {
   return {
     from: vi.fn(() => ({
       select: vi.fn(() => ({

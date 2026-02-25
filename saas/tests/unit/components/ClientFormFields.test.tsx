@@ -47,7 +47,7 @@ function renderFields(overrides?: {
 }) {
   const onChange = overrides?.onChange ?? vi.fn()
   const props = {
-    formData: { ...defaultFormData, ...overrides?.formData },
+    formData: { ...defaultFormData, ...overrides?.formData } as Record<string, string>,
     onChange,
     fieldErrors: overrides?.fieldErrors ?? {},
   }

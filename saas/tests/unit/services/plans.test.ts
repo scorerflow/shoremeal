@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { requestPlanGeneration, getPlanStatusData, generatePlanPdfForExport } from '../plans'
+import { requestPlanGeneration, getPlanStatusData, generatePlanPdfForExport } from '@/lib/services/plans'
 import { AppError } from '@/lib/errors'
 import type { ValidatedPlanInput } from '@/lib/validation'
 
@@ -42,7 +42,7 @@ vi.mock('@/lib/pdf/generate', () => ({
 }))
 
 import { getTrainerById } from '@/lib/repositories/trainers'
-import { createClient as createClientRecord } from '@/lib/repositories/clients'
+import { getClientById } from '@/lib/repositories/clients'
 import { createPlan, getPlanWithClient } from '@/lib/repositories/plans'
 import { getBrandingColours } from '@/lib/repositories/branding'
 import { createServiceClient } from '@/lib/supabase/server'
@@ -56,24 +56,7 @@ describe('requestPlanGeneration', () => {
   const ip = '127.0.0.1'
 
   const validFormData: ValidatedPlanInput = {
-    name: 'John Doe',
-    age: 25,
-    gender: 'M',
-    height: '180cm',
-    weight: '75kg',
-    ideal_weight: '70kg',
-    activity_level: 'moderately_active',
-    goal: 'fat_loss',
-    dietary_type: 'omnivore',
-    allergies: '',
-    dislikes: '',
-    preferences: '',
-    budget: '$50/week',
-    cooking_skill: 'intermediate',
-    prep_time: '30min',
-    meals_per_day: '3',
-    plan_duration: '7',
-    meal_prep_style: 'mixed',
+    clientId: 'client-456',
   }
 
   beforeEach(() => {
@@ -94,10 +77,6 @@ describe('requestPlanGeneration', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-
-    await expect(
-      requestPlanGeneration(mockSupabase, userId, validFormData, ip)
-    ).rejects.toThrow(AppError)
 
     await expect(
       requestPlanGeneration(mockSupabase, userId, validFormData, ip)
@@ -133,7 +112,7 @@ describe('requestPlanGeneration', () => {
       stripe_customer_id: 'cus_123',
       subscription_tier: 'starter',
       subscription_status: 'active',
-      plans_used_this_month: 10, // Starter tier limit is 10
+      plans_used_this_month: 10,
       billing_cycle_start: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -141,11 +120,57 @@ describe('requestPlanGeneration', () => {
 
     await expect(
       requestPlanGeneration(mockSupabase, userId, validFormData, ip)
-    ).rejects.toThrow(AppError)
+    ).rejects.toThrow('Monthly plan limit reached')
+  })
+
+  it('should throw error if client not found', async () => {
+    vi.mocked(getTrainerById).mockResolvedValue({
+      id: userId,
+      email: 'trainer@test.com',
+      full_name: 'Test Trainer',
+      business_name: 'Test Business',
+      stripe_customer_id: 'cus_123',
+      subscription_tier: 'pro',
+      subscription_status: 'active',
+      plans_used_this_month: 5,
+      billing_cycle_start: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    vi.mocked(getClientById).mockResolvedValue(null)
 
     await expect(
       requestPlanGeneration(mockSupabase, userId, validFormData, ip)
-    ).rejects.toThrow('Monthly plan limit reached')
+    ).rejects.toThrow('Client not found')
+  })
+
+  it('should throw error if client belongs to different trainer', async () => {
+    vi.mocked(getTrainerById).mockResolvedValue({
+      id: userId,
+      email: 'trainer@test.com',
+      full_name: 'Test Trainer',
+      business_name: 'Test Business',
+      stripe_customer_id: 'cus_123',
+      subscription_tier: 'pro',
+      subscription_status: 'active',
+      plans_used_this_month: 5,
+      billing_cycle_start: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    vi.mocked(getClientById).mockResolvedValue({
+      id: 'client-456',
+      trainer_id: 'other-trainer',
+      name: 'John Doe',
+      email: null,
+      form_data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as any)
+
+    await expect(
+      requestPlanGeneration(mockSupabase, userId, validFormData, ip)
+    ).rejects.toThrow('Client not found')
   })
 
   it('should successfully create plan and send Inngest event on happy path', async () => {
@@ -157,7 +182,7 @@ describe('requestPlanGeneration', () => {
       stripe_customer_id: 'cus_123',
       subscription_tier: 'pro',
       subscription_status: 'active',
-      plans_used_this_month: 5, // Under Pro limit of 30
+      plans_used_this_month: 5,
       billing_cycle_start: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -168,7 +193,7 @@ describe('requestPlanGeneration', () => {
       trainer_id: userId,
       name: 'John Doe',
       email: null,
-      form_data: validFormData,
+      form_data: { age: '25', weight: '75kg' },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -191,7 +216,7 @@ describe('requestPlanGeneration', () => {
     const mockServiceDb = {} as any
 
     vi.mocked(getTrainerById).mockResolvedValue(mockTrainer as any)
-    vi.mocked(createClientRecord).mockResolvedValue(mockClient as any)
+    vi.mocked(getClientById).mockResolvedValue(mockClient as any)
     vi.mocked(createServiceClient).mockResolvedValue(mockServiceDb)
     vi.mocked(createPlan).mockResolvedValue(mockPlan)
     vi.mocked(inngest.send).mockResolvedValue({ ids: ['event-123'] } as any)
@@ -204,11 +229,7 @@ describe('requestPlanGeneration', () => {
       status: 'pending',
     })
 
-    expect(createClientRecord).toHaveBeenCalledWith(mockSupabase, {
-      trainer_id: userId,
-      name: validFormData.name,
-      form_data: validFormData,
-    })
+    expect(getClientById).toHaveBeenCalledWith(mockSupabase, 'client-456')
 
     expect(createPlan).toHaveBeenCalledWith(mockServiceDb, {
       client_id: mockClient.id,
@@ -222,7 +243,7 @@ describe('requestPlanGeneration', () => {
         planId: mockPlan.id,
         clientId: mockClient.id,
         trainerId: userId,
-        formData: validFormData,
+        formData: { ...mockClient.form_data, name: 'John Doe' },
         businessName: 'Test Business',
       },
     })
@@ -232,7 +253,7 @@ describe('requestPlanGeneration', () => {
       action: 'plan.generation_started',
       resourceType: 'plan',
       resourceId: mockPlan.id,
-      metadata: { clientId: mockClient.id, tier: 'pro', reusingExisting: false },
+      metadata: { clientId: mockClient.id, tier: 'pro' },
       ipAddress: ip,
     })
   })
@@ -252,8 +273,18 @@ describe('requestPlanGeneration', () => {
       updated_at: new Date().toISOString(),
     }
 
+    const mockClient = {
+      id: 'client-456',
+      trainer_id: userId,
+      name: 'John Doe',
+      email: null,
+      form_data: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
     vi.mocked(getTrainerById).mockResolvedValue(mockTrainer as any)
-    vi.mocked(createClientRecord).mockResolvedValue({ id: 'client-456' } as any)
+    vi.mocked(getClientById).mockResolvedValue(mockClient as any)
     vi.mocked(createServiceClient).mockResolvedValue({} as any)
     vi.mocked(createPlan).mockResolvedValue({ id: 'plan-789' } as any)
     vi.mocked(inngest.send).mockResolvedValue({ ids: ['event-123'] } as any)

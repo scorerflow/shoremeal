@@ -220,7 +220,7 @@ describe('Clients Repository (Unit - Mocked)', () => {
   })
 
   describe('getClientsByTrainer', () => {
-    function createClientsMock(data: any[], error: any = null) {
+    function createClientsMock(data: any[] | null, error: any = null) {
       const rangeMock = vi.fn().mockResolvedValue({ data, error })
       const orderMock = vi.fn(() => ({ range: rangeMock }))
       const eqMock = vi.fn(() => ({ order: orderMock }))

@@ -74,7 +74,7 @@ describe('Branding Repository (Unit - Mocked)', () => {
     })
 
     it('should NOT include logo_url when undefined', async () => {
-      const updateMock = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
+      const updateMock = vi.fn((_data: Record<string, unknown>) => ({ eq: vi.fn().mockResolvedValue({ error: null }) }))
       mockSupabase.from = vi.fn(() => ({ update: updateMock })) as any
 
       await updateBranding(mockSupabase, 'user-123', {
