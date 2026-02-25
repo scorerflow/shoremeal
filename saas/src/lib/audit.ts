@@ -17,6 +17,7 @@ export type AuditAction =
   | 'billing.portal_accessed'
   | 'auth.login'
   | 'auth.signout'
+  | 'account.deleted'
 
 export async function writeAuditLog(params: {
   userId?: string

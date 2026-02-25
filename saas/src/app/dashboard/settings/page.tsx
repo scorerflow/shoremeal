@@ -2,6 +2,7 @@ import { TIERS, type SubscriptionTier } from '@/types'
 import ProfileForm from './profile-form'
 import BrandingForm from './branding-form'
 import BillingSection from './billing-section'
+import DeleteAccountSection from './delete-account-section'
 import { requireAuth } from '@/lib/auth'
 import { getSettingsData } from '@/lib/data/settings'
 
@@ -47,7 +48,7 @@ export default async function SettingsPage() {
       </div>
 
       {/* Billing */}
-      <div id="billing">
+      <div id="billing" className="mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Billing & Subscription</h2>
         <BillingSection
           tier={tier}
@@ -57,6 +58,11 @@ export default async function SettingsPage() {
           hasStripeCustomer={!!trainer?.stripe_customer_id}
           devMode={DEV_MODE}
         />
+      </div>
+
+      {/* Delete Account */}
+      <div>
+        <DeleteAccountSection hasStripeCustomer={!!trainer?.stripe_customer_id} />
       </div>
     </div>
   )

@@ -83,3 +83,14 @@ export async function getSubscription(subscriptionId: string) {
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
   return subscription
 }
+
+export async function cancelAllSubscriptions(customerId: string): Promise<void> {
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'active',
+  })
+
+  for (const subscription of subscriptions.data) {
+    await stripe.subscriptions.cancel(subscription.id)
+  }
+}

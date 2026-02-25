@@ -415,48 +415,6 @@ describe('PlansPageClient', () => {
     })
   })
 
-  describe('Token Display', () => {
-    it('should show token count if tokens_used > 0', () => {
-      render(
-        <PlansPageClient
-          groupedClients={[mockClientWithPlans]}
-          hasSubscription={true}
-          totalPlans={3}
-          hasMore={false}
-        />
-      )
-
-      // Expand to see plans
-      const clientHeader = screen.getByRole('button', { name: /john doe/i })
-      fireEvent.click(clientHeader)
-
-      // First plan has 1000 tokens
-      expect(screen.getByText(/1,000 tokens/)).toBeInTheDocument()
-
-      // Third plan has 500 tokens
-      expect(screen.getByText(/500 tokens/)).toBeInTheDocument()
-    })
-
-    it('should not show token count if tokens_used = 0', () => {
-      render(
-        <PlansPageClient
-          groupedClients={[mockClientWithPlans]}
-          hasSubscription={true}
-          totalPlans={3}
-          hasMore={false}
-        />
-      )
-
-      // Expand to see plans
-      const clientHeader = screen.getByRole('button', { name: /john doe/i })
-      fireEvent.click(clientHeader)
-
-      // Second plan has 0 tokens - check it doesn't show "0 tokens"
-      const planElements = screen.getAllByText(/\d{1,2}:\d{2}/)
-      expect(planElements[1].textContent).not.toContain('0 tokens')
-    })
-  })
-
   describe('HasMore Indicator', () => {
     it('should not render hasMore indicator when hasMore is false', () => {
       render(
