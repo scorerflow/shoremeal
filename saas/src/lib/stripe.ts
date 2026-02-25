@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { APP_CONFIG } from '@/lib/config'
+import type { SubscriptionTier } from '@/types'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -13,6 +14,19 @@ export const PRICE_IDS = {
 } as const
 
 export type PriceTier = keyof typeof PRICE_IDS
+
+/**
+ * Reverse-lookup: given a Stripe price ID, return the matching subscription tier.
+ * Returns null if the price ID doesn't match any known tier.
+ */
+export function getTierFromPriceId(priceId: string): SubscriptionTier | null {
+  for (const [tier, id] of Object.entries(PRICE_IDS)) {
+    if (id === priceId) {
+      return tier as SubscriptionTier
+    }
+  }
+  return null
+}
 
 export async function createCheckoutSession({
   customerId,

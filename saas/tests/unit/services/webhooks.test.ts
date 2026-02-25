@@ -5,7 +5,7 @@ import {
   handleSubscriptionDeleted,
   handlePaymentSucceeded,
   handlePaymentFailed,
-} from '../webhooks'
+} from '@/lib/services/webhooks'
 import type Stripe from 'stripe'
 
 // Mock dependencies
@@ -13,8 +13,17 @@ vi.mock('@/lib/stripe', () => ({
   stripe: {
     subscriptions: {
       retrieve: vi.fn(),
+      update: vi.fn(),
     },
   },
+  getTierFromPriceId: vi.fn((priceId: string) => {
+    const map: Record<string, string> = {
+      'price_dev_starter': 'starter',
+      'price_dev_pro': 'pro',
+      'price_dev_agency': 'agency',
+    }
+    return map[priceId] || null
+  }),
 }))
 
 vi.mock('@/lib/repositories/trainers', () => ({
@@ -25,9 +34,14 @@ vi.mock('@/lib/audit', () => ({
   writeAuditLog: vi.fn(),
 }))
 
-import { stripe } from '@/lib/stripe'
+import { stripe, getTierFromPriceId } from '@/lib/stripe'
 import { updateTrainerSubscription } from '@/lib/repositories/trainers'
 import { writeAuditLog } from '@/lib/audit'
+
+// Helper to create mock subscription items
+function mockItems(priceId: string) {
+  return { data: [{ price: { id: priceId } }] }
+}
 
 describe('handleCheckoutCompleted', () => {
   const mockDb = {} as any
@@ -45,6 +59,7 @@ describe('handleCheckoutCompleted', () => {
 
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
+      items: mockItems('price_dev_pro') as any,
       metadata: {
         tier: 'pro',
         trainer_id: 'trainer-456',
@@ -80,7 +95,7 @@ describe('handleCheckoutCompleted', () => {
     })
   })
 
-  it('should default to starter tier if metadata missing', async () => {
+  it('should derive tier from price ID even if metadata is missing', async () => {
     const mockSession: Partial<Stripe.Checkout.Session> = {
       id: 'cs_test',
       customer: 'cus_123',
@@ -89,6 +104,54 @@ describe('handleCheckoutCompleted', () => {
 
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
+      items: mockItems('price_dev_pro') as any,
+      metadata: {
+        trainer_id: 'trainer-789',
+      },
+    }
+
+    vi.mocked(stripe.subscriptions.retrieve).mockResolvedValue(mockSubscription as any)
+
+    await handleCheckoutCompleted(mockDb, mockSession as Stripe.Checkout.Session)
+
+    const updateCall = vi.mocked(updateTrainerSubscription).mock.calls[0][2]
+    expect(updateCall.subscription_tier).toBe('pro')
+  })
+
+  it('should fall back to metadata tier if price ID not recognised', async () => {
+    const mockSession: Partial<Stripe.Checkout.Session> = {
+      id: 'cs_test',
+      customer: 'cus_123',
+      subscription: 'sub_123',
+    }
+
+    const mockSubscription: Partial<Stripe.Subscription> = {
+      id: 'sub_123',
+      items: mockItems('price_unknown_xxx') as any,
+      metadata: {
+        tier: 'agency',
+        trainer_id: 'trainer-789',
+      },
+    }
+
+    vi.mocked(stripe.subscriptions.retrieve).mockResolvedValue(mockSubscription as any)
+
+    await handleCheckoutCompleted(mockDb, mockSession as Stripe.Checkout.Session)
+
+    const updateCall = vi.mocked(updateTrainerSubscription).mock.calls[0][2]
+    expect(updateCall.subscription_tier).toBe('agency')
+  })
+
+  it('should default to starter if both price ID and metadata missing', async () => {
+    const mockSession: Partial<Stripe.Checkout.Session> = {
+      id: 'cs_test',
+      customer: 'cus_123',
+      subscription: 'sub_123',
+    }
+
+    const mockSubscription: Partial<Stripe.Subscription> = {
+      id: 'sub_123',
+      items: mockItems('price_unknown_xxx') as any,
       metadata: {
         trainer_id: 'trainer-789',
       },
@@ -114,6 +177,7 @@ describe('handleSubscriptionUpdated', () => {
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
       status: 'active',
+      items: mockItems('price_dev_agency') as any,
       metadata: {
         tier: 'agency',
         trainer_id: 'trainer-456',
@@ -140,6 +204,7 @@ describe('handleSubscriptionUpdated', () => {
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
       status: 'past_due',
+      items: mockItems('price_dev_pro') as any,
       metadata: {
         tier: 'pro',
         trainer_id: 'trainer-789',
@@ -156,6 +221,7 @@ describe('handleSubscriptionUpdated', () => {
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
       status: 'canceled',
+      items: mockItems('price_dev_starter') as any,
       metadata: {
         tier: 'starter',
         trainer_id: 'trainer-123',
@@ -172,6 +238,7 @@ describe('handleSubscriptionUpdated', () => {
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
       status: 'trialing' as any,
+      items: mockItems('price_dev_pro') as any,
       metadata: {
         tier: 'pro',
         trainer_id: 'trainer-456',
@@ -197,10 +264,83 @@ describe('handleSubscriptionUpdated', () => {
     expect(writeAuditLog).not.toHaveBeenCalled()
   })
 
-  it('should default to starter tier if not in metadata', async () => {
+  it('should detect tier change when metadata is stale (upgrade)', async () => {
     const mockSubscription: Partial<Stripe.Subscription> = {
       id: 'sub_123',
       status: 'active',
+      items: mockItems('price_dev_pro') as any,
+      metadata: {
+        tier: 'starter',
+        trainer_id: 'trainer-123',
+      },
+    }
+
+    vi.mocked(stripe.subscriptions.update).mockResolvedValue({} as any)
+
+    await handleSubscriptionUpdated(mockDb, mockSubscription as Stripe.Subscription)
+
+    // Should use pro (from price ID), not starter (from stale metadata)
+    expect(updateTrainerSubscription).toHaveBeenCalledWith(mockDb, 'trainer-123', {
+      subscription_tier: 'pro',
+      subscription_status: 'active',
+    })
+
+    // Should sync metadata on Stripe
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith('sub_123', {
+      metadata: { tier: 'pro', trainer_id: 'trainer-123' },
+    })
+  })
+
+  it('should detect tier change when metadata is stale (downgrade)', async () => {
+    const mockSubscription: Partial<Stripe.Subscription> = {
+      id: 'sub_123',
+      status: 'active',
+      items: mockItems('price_dev_starter') as any,
+      metadata: {
+        tier: 'pro',
+        trainer_id: 'trainer-456',
+      },
+    }
+
+    vi.mocked(stripe.subscriptions.update).mockResolvedValue({} as any)
+
+    await handleSubscriptionUpdated(mockDb, mockSubscription as Stripe.Subscription)
+
+    expect(updateTrainerSubscription).toHaveBeenCalledWith(mockDb, 'trainer-456', {
+      subscription_tier: 'starter',
+      subscription_status: 'active',
+    })
+
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith('sub_123', {
+      metadata: { tier: 'starter', trainer_id: 'trainer-456' },
+    })
+  })
+
+  it('should fall back to metadata if price ID not recognised', async () => {
+    const mockSubscription: Partial<Stripe.Subscription> = {
+      id: 'sub_123',
+      status: 'active',
+      items: mockItems('price_unknown_xxx') as any,
+      metadata: {
+        tier: 'agency',
+        trainer_id: 'trainer-789',
+      },
+    }
+
+    await handleSubscriptionUpdated(mockDb, mockSubscription as Stripe.Subscription)
+
+    const updateCall = vi.mocked(updateTrainerSubscription).mock.calls[0][2]
+    expect(updateCall.subscription_tier).toBe('agency')
+
+    // Should NOT try to sync metadata when price ID is unknown
+    expect(stripe.subscriptions.update).not.toHaveBeenCalled()
+  })
+
+  it('should default to starter if both price ID and metadata missing', async () => {
+    const mockSubscription: Partial<Stripe.Subscription> = {
+      id: 'sub_123',
+      status: 'active',
+      items: mockItems('price_unknown_xxx') as any,
       metadata: {
         trainer_id: 'trainer-123',
       },

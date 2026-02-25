@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
-import { stripe } from '@/lib/stripe'
+import { stripe, getTierFromPriceId } from '@/lib/stripe'
 import { updateTrainerSubscription } from '@/lib/repositories/trainers'
 import { writeAuditLog } from '@/lib/audit'
 import type { SubscriptionTier } from '@/types'
@@ -12,8 +12,13 @@ export async function handleCheckoutCompleted(
   const subscription = await stripe.subscriptions.retrieve(
     session.subscription as string
   )
-  const tier = (subscription.metadata.tier || 'starter') as SubscriptionTier
   const trainerId = subscription.metadata.trainer_id
+
+  // Derive tier from price ID (source of truth), fall back to metadata
+  const priceId = subscription.items?.data?.[0]?.price?.id
+  const tier = (priceId && getTierFromPriceId(priceId))
+    || (subscription.metadata.tier as SubscriptionTier)
+    || 'starter'
 
   await updateTrainerSubscription(db, trainerId, {
     stripe_customer_id: session.customer as string,
@@ -39,10 +44,22 @@ export async function handleSubscriptionUpdated(
   const trainerId = subscription.metadata.trainer_id
   if (!trainerId) return
 
-  const tier = (subscription.metadata.tier || 'starter') as SubscriptionTier
+  // Derive tier from price ID (source of truth), fall back to metadata
+  const priceId = subscription.items?.data?.[0]?.price?.id
+  const tier = (priceId && getTierFromPriceId(priceId))
+    || (subscription.metadata.tier as SubscriptionTier)
+    || 'starter'
+
   const status = subscription.status === 'active' ? 'active' :
                 subscription.status === 'past_due' ? 'past_due' :
                 subscription.status === 'canceled' ? 'cancelled' : 'active'
+
+  // Keep metadata in sync for debugging/support visibility
+  if (priceId && getTierFromPriceId(priceId) && subscription.metadata.tier !== tier) {
+    await stripe.subscriptions.update(subscription.id, {
+      metadata: { ...subscription.metadata, tier },
+    })
+  }
 
   await updateTrainerSubscription(db, trainerId, {
     subscription_tier: tier,
