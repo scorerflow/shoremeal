@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import Footer from '@/components/Footer'
+import PublicNav from '@/components/PublicNav'
 
 const tiers = [
   {
@@ -47,27 +48,10 @@ const tiers = [
   },
 ]
 
-export default function Home() {
+export default async function Home() {
   return (
     <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-primary-800">Forzafed</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/login" className="text-gray-600 hover:text-gray-900">
-                Log in
-              </Link>
-              <Link href="/signup" className="btn-primary">
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* Hero */}
       <section className="bg-gradient-to-b from-primary-50 to-white py-20">
