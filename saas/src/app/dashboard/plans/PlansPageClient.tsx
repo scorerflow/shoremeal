@@ -179,9 +179,6 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
-                            {plan.tokens_used > 0 && (
-                              <span className="ml-2">• {plan.tokens_used.toLocaleString()} tokens</span>
-                            )}
                           </p>
                         </div>
                       </div>
