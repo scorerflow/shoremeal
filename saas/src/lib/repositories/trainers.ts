@@ -72,6 +72,26 @@ export async function updateStripeCustomerId(
   if (error) throw new Error(`Failed to update Stripe customer ID: ${error.message}`)
 }
 
+export async function updateTrainerProfile(
+  db: SupabaseClient,
+  trainerId: string,
+  data: { full_name: string; business_name?: string | null }
+): Promise<Trainer> {
+  const { data: updated, error } = await db
+    .from('trainers')
+    .update({
+      full_name: data.full_name,
+      business_name: data.business_name ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', trainerId)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(`Failed to update profile: ${error.message}`)
+  return updated as Trainer
+}
+
 export async function incrementPlansUsed(
   db: SupabaseClient,
   trainerId: string

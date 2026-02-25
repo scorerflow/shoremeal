@@ -118,3 +118,13 @@ export const updateClientSchema = z.object({
 })
 
 export type ValidatedClientUpdate = z.infer<typeof updateClientSchema>
+
+export const updateProfileSchema = z.object({
+  full_name: sanitizedString.pipe(z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less')),
+  business_name: sanitizedString
+    .pipe(z.string().max(100, 'Business name must be 100 characters or less'))
+    .optional()
+    .transform((val) => (val === '' ? null : val ?? null)),
+})
+
+export type ValidatedProfileUpdate = z.infer<typeof updateProfileSchema>

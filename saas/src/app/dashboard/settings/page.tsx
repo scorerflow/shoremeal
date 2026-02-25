@@ -1,4 +1,5 @@
 import { TIERS, type SubscriptionTier } from '@/types'
+import ProfileForm from './profile-form'
 import BrandingForm from './branding-form'
 import BillingSection from './billing-section'
 import { requireAuth } from '@/lib/auth'
@@ -18,6 +19,17 @@ export default async function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600">Manage your branding and subscription.</p>
+      </div>
+
+      {/* Profile */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile</h2>
+        <ProfileForm
+          initialProfile={{
+            fullName: trainer?.full_name || '',
+            businessName: trainer?.business_name || '',
+          }}
+        />
       </div>
 
       {/* Branding */}
