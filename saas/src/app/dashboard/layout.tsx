@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { LayoutDashboard, Users, FileText, Settings, LogOut } from 'lucide-react'
 import { requireAuth } from '@/lib/auth'
 import { getCachedTrainer } from '@/lib/data/cached'
+import Footer from '@/components/Footer'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -84,9 +85,12 @@ export default async function DashboardLayout({
       </header>
 
       {/* Main content */}
-      <main className="md:ml-64 p-6">
-        {children}
-      </main>
+      <div className="md:ml-64 flex flex-col min-h-screen">
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+        <Footer variant="compact" />
+      </div>
     </div>
   )
 }

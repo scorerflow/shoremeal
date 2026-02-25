@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Mail, MessageSquare, HelpCircle } from 'lucide-react'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Contact Us | Forzafed',
@@ -209,22 +210,10 @@ export default function ContactPage() {
             </ul>
           </section>
 
-          {/* Footer Links */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="flex flex-wrap gap-6 text-sm text-gray-600">
-              <Link href="/privacy" className="hover:text-primary-800">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="hover:text-primary-800">
-                Terms of Service
-              </Link>
-              <Link href="/" className="hover:text-primary-800">
-                Back to Home
-              </Link>
-            </div>
-          </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

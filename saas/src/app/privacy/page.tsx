@@ -3,6 +3,7 @@
 // No XSS risk as this is hardcoded content, not user input
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | Forzafed',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPage() {
-  const lastUpdated = '22 February 2026'
+  const lastUpdated = '25 February 2026'
   const contactEmail = 'hello@forzafed.com'
 
   return (
@@ -53,7 +54,7 @@ export default function PrivacyPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Data Controller</h2>
             <p className="text-gray-700 mb-2">
-              Forzafed operates the service available at <strong>forzafed.com</strong> and is the data controller responsible for your personal information.
+              Forzafed is operated by David Scorer, based in Newcastle Upon Tyne, United Kingdom. We operate the service available at <strong>forzafed.com</strong> and are the data controller responsible for your personal information.
             </p>
             <p className="text-gray-700">
               For privacy-related enquiries, contact us at:{' '}
@@ -158,7 +159,7 @@ export default function PrivacyPage() {
               <li>Process subscription payments</li>
               <li>Provide customer support</li>
               <li>Send service-related emails (receipts, plan updates)</li>
-              <li>Improve our AI models and service quality</li>
+              <li>Improve our service quality and user experience</li>
               <li>Detect and prevent fraud or abuse</li>
               <li>Comply with legal obligations</li>
             </ul>
@@ -205,6 +206,15 @@ export default function PrivacyPage() {
                   Purpose: AI-powered nutrition plan generation<br />
                   Privacy Policy: <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-800 hover:underline">anthropic.com/privacy</a><br />
                   <strong>Note:</strong> Anthropic does not train models on your data.
+                </p>
+              </div>
+
+              <div className="border-l-4 border-primary-800 pl-4">
+                <h4 className="font-semibold text-gray-900">Resend (Email Delivery)</h4>
+                <p className="text-gray-700 text-sm">
+                  Location: USA<br />
+                  Purpose: Transactional email delivery (sending nutrition plans to clients)<br />
+                  Privacy Policy: <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary-800 hover:underline">resend.com/legal/privacy-policy</a>
                 </p>
               </div>
 
@@ -419,22 +429,10 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* Footer Links */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="flex flex-wrap gap-6 text-sm text-gray-600">
-              <Link href="/terms" className="hover:text-primary-800">
-                Terms of Service
-              </Link>
-              <Link href="/contact" className="hover:text-primary-800">
-                Contact Us
-              </Link>
-              <Link href="/" className="hover:text-primary-800">
-                Back to Home
-              </Link>
-            </div>
-          </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

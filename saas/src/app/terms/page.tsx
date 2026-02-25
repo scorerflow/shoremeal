@@ -3,6 +3,7 @@
 // No XSS risk as this is hardcoded content, not user input
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Terms of Service | Forzafed',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 export default function TermsPage() {
-  const lastUpdated = '22 February 2026'
+  const lastUpdated = '25 February 2026'
   const contactEmail = 'hello@forzafed.com'
 
   return (
@@ -216,7 +217,19 @@ export default function TermsPage() {
               <li>No charges will occur after cancellation</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-900 mb-3">7.2 Refund Policy</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">7.2 Cooling-Off Period</h3>
+            <p className="text-gray-700 mb-4">
+              Under the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013, you have the right to cancel your subscription within <strong>14 days</strong> of purchase for a full refund, provided you have not used the service to generate any nutrition plans during that period.
+            </p>
+            <p className="text-gray-700 mb-6">
+              To exercise this right, contact us at{' '}
+              <a href={`mailto:${contactEmail}`} className="text-primary-800 hover:underline">
+                {contactEmail}
+              </a>{' '}
+              within 14 days of your initial subscription purchase.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">7.3 Refund Policy</h3>
             <p className="text-gray-700 mb-4">
               <strong>Standard Policy:</strong>
             </p>
@@ -370,8 +383,16 @@ export default function TermsPage() {
             <p className="text-gray-700 mb-4">
               <strong>Our total liability</strong> for all claims shall not exceed the amount you paid us in the 12 months before the claim, or £100, whichever is greater.
             </p>
+            <p className="text-gray-700 mb-4">
+              <strong>Nothing in these Terms excludes or limits our liability for:</strong>
+            </p>
+            <ul className="list-disc pl-6 mb-4 text-gray-700 space-y-1">
+              <li>Death or personal injury caused by our negligence</li>
+              <li>Fraud or fraudulent misrepresentation</li>
+              <li>Any other liability that cannot be excluded or limited by English law</li>
+            </ul>
             <p className="text-gray-700">
-              Some jurisdictions do not allow limitation of liability, so these limitations may not apply to you.
+              Your statutory rights as a consumer are not affected by these Terms.
             </p>
           </section>
 
@@ -528,6 +549,9 @@ export default function TermsPage() {
                 </a>
               </p>
               <p className="text-gray-700 mb-2">
+                <strong>Operated by:</strong> David Scorer, Newcastle Upon Tyne, United Kingdom
+              </p>
+              <p className="text-gray-700 mb-2">
                 <strong>Service Name:</strong> Forzafed
               </p>
               <p className="text-gray-700">
@@ -554,22 +578,10 @@ export default function TermsPage() {
             </div>
           </section>
 
-          {/* Footer Links */}
-          <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="flex flex-wrap gap-6 text-sm text-gray-600">
-              <Link href="/privacy" className="hover:text-primary-800">
-                Privacy Policy
-              </Link>
-              <Link href="/contact" className="hover:text-primary-800">
-                Contact Us
-              </Link>
-              <Link href="/" className="hover:text-primary-800">
-                Back to Home
-              </Link>
-            </div>
-          </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }
