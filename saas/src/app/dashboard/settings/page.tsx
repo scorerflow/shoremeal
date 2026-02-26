@@ -1,16 +1,15 @@
 import { TIERS, type SubscriptionTier } from '@/types'
 import ProfileForm from './profile-form'
-import BrandingForm from './branding-form'
 import BillingSection from './billing-section'
 import DeleteAccountSection from './delete-account-section'
 import { requireAuth } from '@/lib/auth'
-import { getSettingsData } from '@/lib/data/settings'
+import { getCachedTrainer } from '@/lib/data/cached'
 
 const DEV_MODE = process.env.DEV_MODE === 'true'
 
 export default async function SettingsPage() {
   const { user } = await requireAuth()
-  const { trainer, branding } = await getSettingsData(user.id)
+  const trainer = await getCachedTrainer(user.id)
 
   const tier = trainer?.subscription_tier as SubscriptionTier | null
   const tierConfig = tier ? TIERS[tier] : null
@@ -18,8 +17,8 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your branding and subscription.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
+        <p className="text-gray-600">Manage your profile and subscription.</p>
       </div>
 
       {/* Profile */}
@@ -30,20 +29,6 @@ export default async function SettingsPage() {
             fullName: trainer?.full_name || '',
             businessName: trainer?.business_name || '',
           }}
-        />
-      </div>
-
-      {/* Branding */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Branding</h2>
-        <BrandingForm
-          initialBranding={{
-            logoUrl: branding?.logo_url || null,
-            primaryColour: branding?.primary_colour || '#2C5F2D',
-            secondaryColour: branding?.secondary_colour || '#4A7C4E',
-            accentColour: branding?.accent_colour || '#FF8C00',
-          }}
-          devMode={DEV_MODE}
         />
       </div>
 

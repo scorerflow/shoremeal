@@ -14,7 +14,7 @@ const tiers = [
       'Email support',
       'Basic branding (logo)',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     popular: false,
   },
   {
@@ -28,7 +28,7 @@ const tiers = [
       'Full branding (logo + colours)',
       'Client history',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     popular: true,
   },
   {
@@ -43,7 +43,7 @@ const tiers = [
       'Client history',
       'API access',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     popular: false,
   },
 ]
@@ -66,7 +66,7 @@ export default async function Home() {
           </p>
           <div className="flex justify-center space-x-4">
             <Link href="/signup" className="btn-primary text-lg px-8 py-3">
-              Start Free Trial
+              Get Started
             </Link>
             <Link href="#pricing" className="btn-secondary text-lg px-8 py-3">
               View Pricing
@@ -185,7 +185,7 @@ export default async function Home() {
             with professional, AI-generated nutrition plans.
           </p>
           <Link href="/signup" className="inline-block bg-white text-primary-800 font-medium px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors">
-            Start Your Free Trial
+            Get Started Today
           </Link>
         </div>
       </section>

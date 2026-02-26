@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { handleRouteError } from '@/lib/errors'
 import { updateTrainerBranding } from '@/lib/services/branding'
+import { getTrainerById } from '@/lib/repositories/trainers'
 import { z } from 'zod'
 
 const brandingSchema = z.object({
@@ -13,6 +14,15 @@ const brandingSchema = z.object({
 
 export const PUT = withAuth(async (request, { user, supabase }) => {
   try {
+    // Verify active subscription
+    const trainer = await getTrainerById(supabase, user.id)
+    if (!trainer?.subscription_tier || trainer.subscription_status !== 'active') {
+      return NextResponse.json(
+        { error: 'Active subscription required to update branding', code: 'SUBSCRIPTION_REQUIRED' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const parsed = brandingSchema.safeParse(body)
 

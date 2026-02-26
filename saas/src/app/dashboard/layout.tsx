@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, FileText, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Palette, Settings, LogOut } from 'lucide-react'
 import { requireAuth } from '@/lib/auth'
 import { getCachedTrainer } from '@/lib/data/cached'
 import Footer from '@/components/Footer'
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Clients', href: '/dashboard/clients', icon: Users },
   { name: 'Plans', href: '/dashboard/plans', icon: FileText },
+  { name: 'Branding', href: '/dashboard/branding', icon: Palette },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 

@@ -32,5 +32,5 @@ export async function POST(request: NextRequest) {
 
   // Get the origin from the request
   const origin = request.nextUrl.origin
-  return NextResponse.redirect(new URL('/login', origin))
+  return NextResponse.redirect(new URL('/login', origin), 303)
 }

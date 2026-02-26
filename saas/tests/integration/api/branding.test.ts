@@ -19,6 +19,12 @@ describe('PUT /api/branding - Logo & Colors Update', () => {
   beforeEach(async () => {
     user = await createTestUser()
 
+    // Set active subscription (required to update branding)
+    await supabase
+      .from('trainers')
+      .update({ subscription_tier: 'pro', subscription_status: 'active' })
+      .eq('id', user.user.id)
+
     // Initialize branding record with defaults
     await supabase.from('branding').upsert({
       trainer_id: user.user.id,
@@ -317,8 +323,38 @@ describe('PUT /api/branding - Logo & Colors Update', () => {
       expect(response.status).toBe(401)
     })
 
+    it('should reject branding update without active subscription', async () => {
+      // Remove subscription
+      await supabase
+        .from('trainers')
+        .update({ subscription_tier: null, subscription_status: null })
+        .eq('id', user.user.id)
+
+      const request = createTestRequest('/api/branding', {
+        method: 'PUT',
+        body: {
+          primary_colour: '#FF0000',
+          secondary_colour: '#00FF00',
+          accent_colour: '#0000FF',
+        },
+        authToken: user.accessToken,
+      })
+
+      const response = await updateBranding(request)
+      expect(response.status).toBe(403)
+
+      const data = await response.json()
+      expect(data.code).toBe('SUBSCRIPTION_REQUIRED')
+    })
+
     it('should only update branding for authenticated user (RLS)', async () => {
       const user2 = await createTestUser()
+
+      // Give user2 an active subscription
+      await supabase
+        .from('trainers')
+        .update({ subscription_tier: 'starter', subscription_status: 'active' })
+        .eq('id', user2.user.id)
 
       // Update user2's branding to have distinct colors (branding record already exists from createTestUser)
       await supabase

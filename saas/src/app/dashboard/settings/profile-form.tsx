@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Loader2, Check, User } from 'lucide-react'
 
 interface ProfileFormProps {
@@ -11,6 +12,7 @@ interface ProfileFormProps {
 }
 
 export default function ProfileForm({ initialProfile }: ProfileFormProps) {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +44,7 @@ export default function ProfileForm({ initialProfile }: ProfileFormProps) {
       }
 
       setSaved(true)
+      router.refresh()
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')

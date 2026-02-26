@@ -25,16 +25,10 @@ export default async function DashboardPage() {
         title="Dashboard"
         subtitle={`Welcome back${trainer?.full_name ? `, ${trainer.full_name.split(' ')[0]}` : ''}!`}
         action={
-          hasSubscription ? (
-            <Link href="/dashboard/clients/add" className="btn-primary flex items-center">
-              <Plus className="h-5 w-5 mr-2" />
-              Add Client
-            </Link>
-          ) : (
-            <Link href="/pricing" className="btn-accent flex items-center">
-              Upgrade to Create Plans
-            </Link>
-          )
+          <Link href="/dashboard/clients/add" className="btn-primary flex items-center">
+            <Plus className="h-5 w-5 mr-2" />
+            Add Client
+          </Link>
         }
       />
 
@@ -52,13 +46,13 @@ export default async function DashboardPage() {
           icon={<FileText className="h-6 w-6 text-primary-800" />}
           iconBg="bg-primary-100"
           label="Plans This Month"
-          value={`${plansUsed} / ${plansLimit || '\u221E'}`}
+          value={plansLimit > 0 ? `${plansUsed} / ${plansLimit}` : '—'}
         />
         <StatCard
           icon={<TrendingUp className="h-6 w-6 text-green-700" />}
           iconBg="bg-green-100"
           label="Plans Remaining"
-          value={plansRemaining}
+          value={plansLimit > 0 ? plansRemaining : '—'}
         />
         <StatCard
           icon={<Users className="h-6 w-6 text-blue-700" />}
@@ -81,7 +75,7 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             <Link
               href="/dashboard/clients/add"
-              className={`block p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors ${!hasSubscription ? 'opacity-50 pointer-events-none' : ''}`}
+              className="block p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
             >
               <p className="font-medium text-gray-900">Add Client</p>
               <p className="text-sm text-gray-600">Create a client profile to manage their nutrition plans</p>
@@ -94,11 +88,13 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-600">See all your clients and their plans</p>
             </Link>
             <Link
-              href="/dashboard/settings"
-              className="block p-4 border border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+              href="/dashboard/branding"
+              className={`block p-4 border border-gray-200 rounded-lg transition-colors ${hasSubscription ? 'hover:border-primary-500 hover:bg-primary-50' : 'opacity-50 pointer-events-none'}`}
             >
               <p className="font-medium text-gray-900">Branding Settings</p>
-              <p className="text-sm text-gray-600">Customise your PDF branding</p>
+              <p className="text-sm text-gray-600">
+                {hasSubscription ? 'Customise your PDF branding' : 'Subscribe to customise branding'}
+              </p>
             </Link>
           </div>
         </div>
