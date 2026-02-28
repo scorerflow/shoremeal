@@ -35,7 +35,7 @@ export default async function ClientsPage() {
     <div>
       <PageHeader
         title="Clients"
-        subtitle="Manage your client roster and their nutrition plans"
+        subtitle="Manage your client profiles and details."
         action={
           <Link href="/dashboard/clients/add" className="btn-primary flex items-center">
             <Plus className="h-5 w-5 mr-2" />
