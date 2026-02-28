@@ -230,7 +230,7 @@ export default function PlanDetailPage() {
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {plan.client_name ? `${plan.client_name}'s Nutrition Plan` : 'Nutrition Plan'}
@@ -417,6 +417,8 @@ export default function PlanDetailPage() {
                 border-top: 2px solid #e5e7eb;
               }
               .markdown-content :global(table) {
+                display: block;
+                overflow-x: auto;
                 width: 100%;
                 margin: 2rem 0;
                 border-collapse: collapse;

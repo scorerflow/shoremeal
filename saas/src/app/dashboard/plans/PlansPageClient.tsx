@@ -121,7 +121,7 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
                 </div>
 
                 {/* Stats Pills */}
-                <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0 ml-4">
                   {client.stats.completed > 0 && (
                     <div className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                       <CheckCircle2 className="h-4 w-4" />
@@ -160,7 +160,7 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
                   return (
                     <div
                       key={plan.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className={`p-2 rounded-lg ${config.bg}`}>
@@ -183,7 +183,7 @@ export default function PlansPageClient({ groupedClients, hasSubscription, total
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                         <StatusPill status={plan.status} />
                         <Link
                           href={`/dashboard/plans/${plan.id}`}

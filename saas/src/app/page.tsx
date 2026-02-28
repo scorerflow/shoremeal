@@ -64,7 +64,7 @@ export default async function Home() {
             Generate personalised, comprehensive nutrition plans for your clients.
             Complete with recipes, shopping lists, and meal prep guides.
           </p>
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link href="/signup" className="btn-primary text-lg px-8 py-3">
               Get Started
             </Link>

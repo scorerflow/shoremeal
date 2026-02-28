@@ -3,6 +3,7 @@ import { LayoutDashboard, Users, FileText, Palette, Settings, LogOut } from 'luc
 import { requireAuth } from '@/lib/auth'
 import { getCachedTrainer } from '@/lib/data/cached'
 import Footer from '@/components/Footer'
+import MobileNav from '@/components/MobileNav'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -81,7 +82,11 @@ export default async function DashboardLayout({
           <Link href="/dashboard" className="text-xl font-bold text-primary-800">
             Forzafed
           </Link>
-          {/* Mobile menu button would go here */}
+          <MobileNav
+            userName={trainer?.full_name || userEmail}
+            businessName={trainer?.business_name || 'Personal Trainer'}
+            subscriptionTier={trainer?.subscription_tier || null}
+          />
         </div>
       </header>
 
