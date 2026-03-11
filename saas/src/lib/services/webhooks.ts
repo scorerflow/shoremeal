@@ -3,38 +3,13 @@ import Stripe from 'stripe'
 import { stripe, getTierFromPriceId } from '@/lib/stripe'
 import { updateTrainerSubscription } from '@/lib/repositories/trainers'
 import { writeAuditLog } from '@/lib/audit'
-import type { SubscriptionTier } from '@/types'
+import { syncCheckoutToDatabase, deriveTierFromSubscription, mapStripeSubscriptionStatus } from '@/lib/services/billing'
 
 export async function handleCheckoutCompleted(
   db: SupabaseClient,
   session: Stripe.Checkout.Session
 ) {
-  const subscription = await stripe.subscriptions.retrieve(
-    session.subscription as string
-  )
-  const trainerId = subscription.metadata.trainer_id
-
-  // Derive tier from price ID (source of truth), fall back to metadata
-  const priceId = subscription.items?.data?.[0]?.price?.id
-  const tier = (priceId && getTierFromPriceId(priceId))
-    || (subscription.metadata.tier as SubscriptionTier)
-    || 'starter'
-
-  await updateTrainerSubscription(db, trainerId, {
-    stripe_customer_id: session.customer as string,
-    subscription_tier: tier,
-    subscription_status: 'active',
-    billing_cycle_start: new Date().toISOString(),
-    plans_used_this_month: 0,
-  })
-
-  await writeAuditLog({
-    userId: trainerId,
-    action: 'subscription.created',
-    resourceType: 'subscription',
-    resourceId: session.subscription as string,
-    metadata: { tier, customerId: session.customer },
-  })
+  await syncCheckoutToDatabase(db, session)
 }
 
 export async function handleSubscriptionUpdated(
@@ -44,17 +19,11 @@ export async function handleSubscriptionUpdated(
   const trainerId = subscription.metadata.trainer_id
   if (!trainerId) return
 
-  // Derive tier from price ID (source of truth), fall back to metadata
-  const priceId = subscription.items?.data?.[0]?.price?.id
-  const tier = (priceId && getTierFromPriceId(priceId))
-    || (subscription.metadata.tier as SubscriptionTier)
-    || 'starter'
-
-  const status = subscription.status === 'active' ? 'active' :
-                subscription.status === 'past_due' ? 'past_due' :
-                subscription.status === 'canceled' ? 'cancelled' : 'active'
+  const tier = deriveTierFromSubscription(subscription)
+  const status = mapStripeSubscriptionStatus(subscription.status)
 
   // Keep metadata in sync for debugging/support visibility
+  const priceId = subscription.items?.data?.[0]?.price?.id
   if (priceId && getTierFromPriceId(priceId) && subscription.metadata.tier !== tier) {
     await stripe.subscriptions.update(subscription.id, {
       metadata: { ...subscription.metadata, tier },

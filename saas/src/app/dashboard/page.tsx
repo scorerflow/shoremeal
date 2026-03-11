@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { Plus, FileText, Users, TrendingUp } from 'lucide-react'
 import { TIERS, SubscriptionTier } from '@/types'
 import { PageHeader } from '@/components/PageHeader'
 import { StatCard } from '@/components/StatCard'
 import { AlertBanner } from '@/components/AlertBanner'
+import { CheckoutSuccess } from '@/components/CheckoutSuccess'
 import { requireAuth } from '@/lib/auth'
 import { getDashboardData } from '@/lib/data/dashboard'
 
@@ -31,6 +33,11 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      {/* Checkout verification (handles post-checkout redirect) */}
+      <Suspense>
+        <CheckoutSuccess />
+      </Suspense>
 
       {/* Subscription alert */}
       {!hasSubscription && (

@@ -109,7 +109,7 @@ describe('initiateCheckout', () => {
           quantity: 1,
         },
       ],
-      success_url: 'https://example.com/dashboard?success=true',
+      success_url: 'https://example.com/dashboard?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'https://example.com/pricing?cancelled=true',
       allow_promotion_codes: true,
       subscription_data: {

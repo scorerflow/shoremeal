@@ -33,6 +33,14 @@ export const checkoutSchema = z.object({
 
 export type ValidatedCheckoutInput = z.infer<typeof checkoutSchema>
 
+export const checkoutVerifySchema = z.object({
+  sessionId: z.string()
+    .min(1, 'Session ID is required')
+    .regex(/^cs_/, 'Invalid checkout session ID format'),
+})
+
+export type ValidatedCheckoutVerify = z.infer<typeof checkoutVerifySchema>
+
 export const createClientSchema = z.object({
   name: sanitizedString.pipe(z.string().min(1, 'Client name is required').max(100)),
   email: sanitizedString
