@@ -10,6 +10,87 @@ import { DISPLAY_LABELS } from '@/lib/constants'
 import { stripEmojis, parsePlanText } from '@/lib/pdf/parse-plan'
 import type { ClientFormData } from '@/types'
 
+interface GenerateResult {
+  planText: string
+  totalCost: number
+  tokensUsed: number
+}
+
+/**
+ * Calls Claude API with truncation detection and automatic continuation.
+ * Extracted for testability — handles the full lifecycle of a generation request.
+ */
+export async function callClaudeWithContinuation(
+  client: Pick<Anthropic, 'messages'>,
+  prompt: string,
+): Promise<GenerateResult> {
+  const message = await client.messages.create({
+    model: APP_CONFIG.claude.model,
+    max_tokens: APP_CONFIG.claude.maxTokens,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  let rawPlanText = message.content[0].type === 'text'
+    ? message.content[0].text
+    : ''
+
+  let totalInputTokens = message.usage.input_tokens
+  let totalOutputTokens = message.usage.output_tokens
+
+  // If response was truncated, attempt one continuation call
+  if (message.stop_reason === 'max_tokens' && rawPlanText.length > 0) {
+    const continuation = await client.messages.create({
+      model: APP_CONFIG.claude.model,
+      max_tokens: APP_CONFIG.claude.maxTokens,
+      messages: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: rawPlanText },
+        { role: 'user', content: 'Your previous response was cut off. Please continue exactly where you left off — do not repeat any content.' },
+      ],
+    })
+
+    const continuationText = continuation.content[0].type === 'text'
+      ? continuation.content[0].text
+      : ''
+
+    rawPlanText += continuationText
+    totalInputTokens += continuation.usage.input_tokens
+    totalOutputTokens += continuation.usage.output_tokens
+
+    // If still truncated after continuation, fail rather than save incomplete content
+    if (continuation.stop_reason === 'max_tokens') {
+      throw new Error(
+        'Plan generation failed: Response exceeded maximum length even after continuation. ' +
+        'The plan may be too complex for a single generation. ' +
+        'This will trigger a retry with a fresh generation attempt.'
+      )
+    }
+  }
+
+  // Strip emojis from plan text
+  const planText = stripEmojis(rawPlanText)
+
+  // Validate plan structure: ensure it has parseable sections
+  const parsed = parsePlanText(planText)
+  if (parsed.sections.length === 0) {
+    throw new Error(
+      'Plan generation failed: No sections found in generated plan. ' +
+      'Claude may not have used H1 headings for sections. ' +
+      'This will trigger a retry with a fresh generation attempt.'
+    )
+  }
+
+  const inputCost = (totalInputTokens / 1_000_000) * APP_CONFIG.claude.pricing.inputPerMillion
+  const outputCost = (totalOutputTokens / 1_000_000) * APP_CONFIG.claude.pricing.outputPerMillion
+  const totalCost = inputCost + outputCost
+
+  return {
+    planText,
+    totalCost,
+    tokensUsed: totalInputTokens + totalOutputTokens,
+  }
+}
+
 function getSupabase() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,39 +141,7 @@ export const generatePlan = inngest.createFunction(
       const typedFormData = formData as unknown as ClientFormData & { name: string }
       const prompt = buildNutritionPrompt(typedFormData, businessName)
 
-      const message = await anthropic.messages.create({
-        model: APP_CONFIG.claude.model,
-        max_tokens: APP_CONFIG.claude.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      })
-
-      const rawPlanText = message.content[0].type === 'text'
-        ? message.content[0].text
-        : ''
-
-      // Strip emojis from plan text before saving to database
-      const planText = stripEmojis(rawPlanText)
-
-      // Validate plan structure: ensure it has parseable sections
-      // This prevents silent failures where PDF only shows cover page
-      const parsed = parsePlanText(planText)
-      if (parsed.sections.length === 0) {
-        throw new Error(
-          'Plan generation failed: No sections found in generated plan. ' +
-          'Claude may not have used H1 headings for sections. ' +
-          'This will trigger a retry with a fresh generation attempt.'
-        )
-      }
-
-      const inputCost = (message.usage.input_tokens / 1_000_000) * APP_CONFIG.claude.pricing.inputPerMillion
-      const outputCost = (message.usage.output_tokens / 1_000_000) * APP_CONFIG.claude.pricing.outputPerMillion
-      const totalCost = inputCost + outputCost
-
-      return {
-        planText,
-        totalCost,
-        tokensUsed: message.usage.input_tokens + message.usage.output_tokens,
-      }
+      return callClaudeWithContinuation(anthropic, prompt)
     })
 
     // Step 3: Save result and update usage

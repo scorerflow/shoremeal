@@ -10,7 +10,9 @@ import { createTestUser, deleteTestUser, signOutTestUser } from '../../helpers/a
 import { createTestServiceClient, waitForDb } from '../../helpers/db'
 import type { TestUser } from '../../helpers/auth'
 
-describe('Session Isolation', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('Session Isolation', () => {
   let userA: TestUser
   let userB: TestUser
 

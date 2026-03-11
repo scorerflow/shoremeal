@@ -14,7 +14,9 @@ import { GET as getClients, POST as createClient } from '@/app/api/clients/route
 import { GET as getClient, PUT as updateClient } from '@/app/api/clients/[id]/route'
 import { GET as getClientPlans } from '@/app/api/clients/[id]/plans/route'
 
-describe('Client Management API', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('Client Management API', () => {
   let userId: string
   let userEmail: string
   let authToken: string

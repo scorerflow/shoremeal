@@ -22,7 +22,9 @@ import { POST as generatePlan } from '@/app/api/generate/route'
 import { inngest } from '@/lib/inngest/client'
 import * as supabaseServer from '@/lib/supabase/server'
 
-describe('Plan Generation API Uses Fresh Client Data', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('Plan Generation API Uses Fresh Client Data', () => {
   let user: TestUser
   const supabase = createTestServiceClient()
   let inngestSpy: ReturnType<typeof vi.spyOn>

@@ -12,7 +12,9 @@ import { createTestRequest } from '../../helpers/request'
 import type { TestUser } from '../../helpers/auth'
 import { PUT as updateBranding } from '@/app/api/branding/route'
 
-describe('PUT /api/branding - Logo & Colors Update', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('PUT /api/branding - Logo & Colors Update', () => {
   let user: TestUser
   const supabase = createTestServiceClient()
 

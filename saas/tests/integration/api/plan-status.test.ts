@@ -18,7 +18,9 @@ import type { TestUser } from '../../helpers/auth'
 // Import route handler
 import { GET as getPlanStatus } from '@/app/api/plans/[id]/status/route'
 
-describe('Plan Status API', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('Plan Status API', () => {
   let userA: TestUser
   let userB: TestUser
   const supabase = createTestServiceClient()

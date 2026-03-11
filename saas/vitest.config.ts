@@ -9,6 +9,7 @@ export default defineConfig({
     // Use happy-dom for component tests, node for integration tests
     // Test files can override with @vitest-environment comment
     environment: 'happy-dom',
+    globalSetup: ['./tests/integration/check-db.ts'],
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     exclude: ['node_modules/', '.next/', 'out/'],

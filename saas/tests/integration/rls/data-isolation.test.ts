@@ -11,7 +11,9 @@ import { createTestUser, deleteTestUser } from '../../helpers/auth'
 import { createTestServiceClient, waitForDb } from '../../helpers/db'
 import type { TestUser } from '../../helpers/auth'
 
-describe('RLS Data Isolation', () => {
+const dbAvailable = process.env.INTEGRATION_DB_AVAILABLE === 'true'
+
+describe.runIf(dbAvailable)('RLS Data Isolation', () => {
   let userA: TestUser
   let userB: TestUser
   let clientA: any
